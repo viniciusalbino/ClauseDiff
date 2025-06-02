@@ -1,0 +1,6 @@
+{
+  "name": "ClauseDiff - Document Comparison Tool",
+  "description": "A web application to compare two .docx documents, highlight differences, and export comparison reports. All processing is done client-side.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

@@ -1,0 +1,79 @@
+1. Introduction
+* 1.1 Actors:
+* User: Defines requirements, prioritizes, approves, accountable for code.
+* AI_Agent: Executes User instructions per PBIs and tasks.
+* 1.2 Architectural Compliance: This document is the AI Coding Agent Policy.
+2. Fundamental Principles
+1. Task-Driven Development: All code changes require an agreed-upon authorizing task.
+2. PBI Association: Tasks MUST be associated with an agreed-upon PBI.
+3. PRD Alignment: If PRD exists, PBI features MUST align with PRD scope. Report discrepancies.
+4. User Authority: User is sole decider for scope and design.
+5. User Responsibility: User is responsible for all code changes.
+6. No Unapproved Changes: Changes outside explicit task scope are PROHIBITED.
+7. Status Synchronisation: Task status in index (1-tasks.md or docs/delivery/<PBI-ID>/tasks.md) MUST match individual task file. Update both immediately on change.
+8. Controlled File Creation: AI_Agent shall not create files outside defined PBI/task/source structures without explicit User pre-approval for each file.
+9. External Package Research & Docs:
+* For tasks with external packages: Research official docs first.
+* Create <task_id>-<package>-guide.md (e.g., tasks/2-1-pg-boss-guide.md or per PBI: docs/delivery/<PBI-ID>/guides/<task_id>-<package>-guide.md) with API usage, date-stamp, and source links.
+10. Task Granularity: Tasks MUST be minimal, cohesive, testable units.
+11. DRY (Don't Repeat Yourself): Define information once; reference elsewhere.
+* Task details: In task files, referenced elsewhere.
+* PBI docs: Reference task list.
+* Exception: Titles/names in lists.
+12. Constants for Repeated/Special Values: Values used >1 (esp. "magic numbers") MUST be named constants.
+13. API/Interface Technical Documentation: For PBIs creating/modifying APIs/interfaces, create/update technical documentation (usage, contracts, integration, config, errors) in docs/technical/ or inline, linked from PBI detail.
+14. Scope Adherence: No gold plating. Propose improvements as new tasks.
+15. Change Management:
+* Confirm PBI/Task association before discussing/making changes.
+* If User requests unassociated change, AI MUST discuss task creation/association first.
+3. Product Backlog Item (PBI) Management
+* 3.1 General: All PBI status transitions MUST be logged in PBI history (timestamp, PBI_ID, event, details, user).
+* 3.2 Backlog Document (docs/delivery/backlog.md):
+* Single source of truth for PBIs, ordered by priority.
+* Table: | ID | Actor | User Story | Status | Conditions of Satisfaction (CoS) |
+* 3.3 PBI Workflow Statuses: Proposed, Agreed, InProgress, InReview, Done, Rejected.
+* 3.4 PBI Event Transitions (Summary - full details from original apply):
+* create_pbi -> Proposed
+* propose_for_backlog (Proposed -> Agreed): Verify PRD alignment.
+* start_implementation (Agreed -> InProgress): Create tasks.
+* ... (etc. for all transitions, keeping key actions)
+* 3.5 PBI Detail Docs (docs/delivery/<PBI-ID>/prd.md):
+* Mini-PRD created when PBI -> Agreed.
+* Sections: # PBI-<ID>: <Title>, ## Overview, ## Problem Statement, ## User Stories, ## Technical Approach, ## UX/UI Considerations, ## Acceptance Criteria, ## Dependencies, ## Open Questions, ## Related Tasks.
+* Links: To backlog.md entry, and backlog.md links here.
+4. Task Management
+* 4.1 General: All Task status transitions MUST be logged in the task's "Status History" section (Timestamp, Event, From_Status, To_Status, Details, User). Only one task per PBI InProgress unless User approves more.
+* 4.2 Task Index File (docs/delivery/<PBI-ID>/tasks.md):
+* Title: # Tasks for PBI <PBI-ID>: <PBI Title>
+* Intro: This document lists all tasks associated with PBI <PBI-ID>.
+* Parent Link: **Parent PBI**: [PBI <PBI-ID>: <PBI Title>](./prd.md)
+* Header: ## Task Summary
+* Table: | Task ID | Name | Status | Description |
+* Name format: [<Task Name>](./<PBI-ID>-<TaskNum>.md)
+* 4.3 Individual Task Files (docs/delivery/<PBI-ID>/<PBI-ID>-<TASK-ID>.md):
+* Created immediately when added to index, linked from index. Links back to index.
+* Sections: # [Task-ID] [Task-Name], ## Description, ## Status History, ## Requirements, ## Implementation Plan, ## Test Plan (see Sec 5.3), ## Verification, ## Files Modified.
+* 4.4 Task Workflow Statuses: Proposed, Agreed, InProgress, Review, Done, Blocked.
+* 4.5 Task Event Transitions (Summary - full details from original apply):
+* user_approves (Proposed -> Agreed): Create task file. Perform analysis/design.
+* start_work (Agreed -> InProgress): Create branch if applicable.
+* submit_for_review (InProgress -> Review): Run tests. PR if applicable.
+* approve (Review -> Done): Merge. Review next tasks for relevance with User.
+* ... (etc.)
+* 4.6 Version Control for Task Completion:
+* Commit message: <task_id> <task_description> (e.g., 1-7 Add pino logging...)
+* PR Title: [<task_id>] <task_description> (link to task in PR body).
+* On Done: git acp "<task_id> <task_description>" (stages all, commits, pushes).
+5. Testing Strategy and Documentation
+* 5.1 Principles: Risk-based, Test Pyramid, Clear/Maintainable, Automated.
+* 5.2 Scoping:
+* Unit: Isolate functions/classes; mock externals. No direct package API tests. Location: test/unit/.
+* Integration: Multiple components. Mock 3rd-party externals; use real internal infra (DBs, queues) in test env. Location: test/integration/ or test/<module>/.
+* E2E: Critical user paths.
+* 5.3 Test Plan Documentation:
+* PBI-Level: CoS in PBI detail (.../prd.md) define high-level scope. PBI task list (.../tasks.md) MUST include one "E2E CoS Test" task (e.g., <PBI-ID>-E2E-CoS-Test.md) for holistic PBI verification.
+* Task-Level: Every code task needs "## Test Plan" section in its detail file. Plan detail proportional to task complexity/risk.
+* Simple tasks: Compilation, basic integration (e.g., "TS compiles").
+* Complex tasks: Objectives, scope, env, mocks, key scenarios, success criteria.
+* No "Done" without passing tests from its plan.
+* Concentrate detailed edge cases in E2E CoS Test task; individual tasks focus on their specific functionality.
