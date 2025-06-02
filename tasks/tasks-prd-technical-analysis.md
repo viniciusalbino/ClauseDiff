@@ -42,6 +42,10 @@
 - `docs/testing/unit-testing-strategy.md` - Unit testing strategy and patterns
 - `docs/testing/integration-testing-plan.md` - Integration testing plan and scenarios
 - `docs/testing/test-automation.md` - Test automation, CI, and maintenance
+- `docs/deployment/netlify-configuration.md` - Netlify configuration and MCP integration
+- `docs/deployment/build-optimization.md` - Build optimization and bundle analysis
+- `docs/deployment/branch-strategy.md` - Branch strategy, workflow, and guide
+- `docs/deployment/deployment-guide.md` - Deployment, rollback, monitoring, and incident response
 
 ## Tasks
 
@@ -155,26 +159,26 @@
     - [x] 5.4.4 Document test maintenance
 
 - [ ] 6.0 CI/CD and Deployment Analysis
-  - [ ] 6.1 Netlify Configuration Review
-    - [ ] 6.1.1 Review build settings
-    - [ ] 6.1.2 Assess deployment strategy
-    - [ ] 6.1.3 Review environment variables
-    - [ ] 6.1.4 Document configuration
-  - [ ] 6.2 Build Optimization
-    - [ ] 6.2.1 Analyze build process
-    - [ ] 6.2.2 Optimize build configuration
-    - [ ] 6.2.3 Review bundle size
-    - [ ] 6.2.4 Document build improvements
-  - [ ] 6.3 Branch Strategy
-    - [ ] 6.3.1 Review current branching
-    - [ ] 6.3.2 Design branch workflow
-    - [ ] 6.3.3 Document branch policies
-    - [ ] 6.3.4 Create branch guide
-  - [ ] 6.4 Deployment Documentation
-    - [ ] 6.4.1 Create deployment guide
-    - [ ] 6.4.2 Document rollback procedures
-    - [ ] 6.4.3 Create monitoring guide
-    - [ ] 6.4.4 Document incident response
+  - [x] 6.1 Netlify Configuration Review
+    - [x] 6.1.1 Review build settings
+    - [x] 6.1.2 Assess deployment strategy
+    - [x] 6.1.3 Review environment variables
+    - [x] 6.1.4 Document configuration
+  - [x] 6.2 Build Optimization
+    - [x] 6.2.1 Analyze build process
+    - [x] 6.2.2 Optimize build configuration
+    - [x] 6.2.3 Review bundle size
+    - [x] 6.2.4 Document build improvements
+  - [x] 6.3 Branch Strategy
+    - [x] 6.3.1 Review current branching
+    - [x] 6.3.2 Design branch workflow
+    - [x] 6.3.3 Document branch policies
+    - [x] 6.3.4 Create branch guide
+  - [x] 6.4 Deployment Documentation
+    - [x] 6.4.1 Create deployment guide
+    - [x] 6.4.2 Document rollback procedures
+    - [x] 6.4.3 Create monitoring guide
+    - [x] 6.4.4 Document incident response
 
 ### Notes
 - Each task will require both analysis and documentation phases
