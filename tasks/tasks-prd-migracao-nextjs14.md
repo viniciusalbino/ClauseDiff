@@ -47,6 +47,10 @@
 - `docs/architecture/auth-integration.md` – Documentation of future authentication integration points and extension options.
 - `src/infrastructure/external-services/analytics.ts` – Placeholder for future analytics integration (no logic yet).
 - `src/infrastructure/external-services/payments.ts` – Placeholder for future payments integration (no logic yet).
+- `docs/architecture/overview.md` – Main architecture and technical decisions overview for ClauseDiff migration.
+- `docs/architecture/code-quality.md` – Code style, testing, and automation standards for ClauseDiff.
+- `docs/architecture/migration-process.md` – Documentation of incremental migration and legacy fallback process.
+- `docs/architecture/onboarding.md` – Onboarding guide for new ClauseDiff developers.
 
 ### Notes
 
@@ -93,8 +97,8 @@
   - [x] 5.2 Documentar pontos de integração para autenticação futura.
   - [x] 5.3 Preparar estrutura para futuras integrações (analytics, pagamentos, etc.).
 
-- [ ] 6.0 Documentar Arquitetura, Padrões e Processo de Migração
-  - [ ] 6.1 Documentar arquitetura e decisões técnicas em `docs/architecture/`.
-  - [ ] 6.2 Documentar padrões de código, testes e automação.
-  - [ ] 6.3 Documentar processo de migração incremental e fallback.
-  - [ ] 6.4 Atualizar documentação de onboarding para novos desenvolvedores. 
+- [x] 6.0 Documentar Arquitetura, Padrões e Processo de Migração
+  - [x] 6.1 Documentar arquitetura e decisões técnicas em `docs/architecture/`.
+  - [x] 6.2 Documentar padrões de código, testes e automação.
+  - [x] 6.3 Documentar processo de migração incremental e fallback.
+  - [x] 6.4 Atualizar documentação de onboarding para novos desenvolvedores. 
