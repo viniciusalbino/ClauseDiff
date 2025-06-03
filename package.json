@@ -19,6 +19,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "concurrently": "^9.1.2",
+    "eslint": "^9.28.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
