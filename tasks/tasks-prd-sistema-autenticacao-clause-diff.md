@@ -1,6 +1,6 @@
 ## Relevant Files
 
-- `src/infrastructure/database/schema.prisma` - Prisma schema: modelagem de usuários, contas, sessões, tokens e billing compatíveis com Auth.js (NextAuth), incluindo índices otimizados, relações e enum Role.
+- `src/infrastructure/database/schema.prisma` - Prisma schema: modelagem de usuários, contas, sessões, tokens, billing e audit log compatíveis com Auth.js (NextAuth), incluindo índices otimizados, relações e enum Role.
 - `app/api/auth/[...nextauth]/route.ts` - Configuração principal do Auth.js (NextAuth) com adapters e provedores.
 - `middleware.ts` - Middleware de segurança para autenticação, autorização e headers.
 - `src/hooks/useAuth.ts` - Hook React para autenticação e sessão.
@@ -17,6 +17,7 @@
 
 - Unit tests devem ser colocados próximos aos arquivos de código correspondentes.
 - Use `npx jest [optional/path/to/test/file]` para rodar os testes.
+- O banco de dados já está preparado para logging/auditoria de eventos de autenticação e segurança via tabela `AuditLog`.
 
 ## Tasks
 
@@ -29,9 +30,9 @@
   - [x] 1.6 Testar integridade do schema e migrations
 
 - [ ] 2.0 Implementação do Auth.js (NextAuth) com provedores e adapter Prisma
-  - [ ] 2.1 Configurar Auth.js com TypeScript type-safe
-  - [ ] 2.2 Integrar adapter Prisma com customizações para logging e auditoria
-  - [ ] 2.3 Implementar provedor de credenciais (email/senha) com validação Zod e hash bcrypt + salt
+  - [x] 2.1 Configurar Auth.js com TypeScript type-safe
+  - [x] 2.2 Integrar adapter Prisma com customizações para logging e auditoria
+  - [x] 2.3 Implementar provedor de credenciais (email/senha) com validação Zod e hash bcrypt + salt
   - [ ] 2.4 Implementar provedor Google OAuth com escopo mínimo necessário
   - [ ] 2.5 Implementar rotação de tokens JWT com refresh strategy
   - [ ] 2.6 Implementar proteção CSRF avançada
