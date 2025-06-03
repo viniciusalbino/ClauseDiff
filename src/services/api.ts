@@ -1,8 +1,6 @@
 import { DocumentData, ComparisonResult } from '../../types';
 import { generateDiff } from '../utils/diffEngine';
 
-const API_BASE_URL = 'http://localhost:3001';
-
 export const compareDocuments = async (doc1: DocumentData, doc2: DocumentData): Promise<ComparisonResult> => {
   if (!doc1.originalFile || !doc2.originalFile) {
     throw new Error('Both documents must have files to compare');

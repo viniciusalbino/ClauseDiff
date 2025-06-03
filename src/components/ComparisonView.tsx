@@ -19,7 +19,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ htmlContent1, ht
 
   const Pane: React.FC<{ title: string | null | undefined, content: string | null, id: string }> = ({ title, content, id }) => (
     <div className="flex-1 p-4 bg-white shadow-md rounded-lg overflow-hidden">
-      <h3 className={`font-['${FONTS.sans}'] ${TEXT_SIZES.subtitle} font-semibold text-blue-800 mb-3 pb-2 border-b border-slate-300 truncate`}>
+      <h3 className={`font-['${FONTS.DEFAULT}'] ${TEXT_SIZES.XLARGE} font-semibold text-blue-800 mb-3 pb-2 border-b border-slate-300 truncate`}>
         {title || "Documento"}
       </h3>
       <div 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { CompareIcon } from './icons/CompareIcon';
-import { PdfIcon } from './icons/PdfIcon';
 import { CsvIcon } from './icons/CsvIcon';
 import { FONTS, TEXT_SIZES } from '../constants';
 
@@ -18,7 +17,7 @@ const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; icon: Rea
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`flex items-center space-x-2 px-4 py-2 rounded-md ${TEXT_SIZES.button} font-['${FONTS.sans}'] font-semibold
+    className={`flex items-center space-x-2 px-4 py-2 rounded-md ${TEXT_SIZES.BASE} font-['${FONTS.DEFAULT}'] font-semibold
                 ${bgColor} ${textColor} ${disabled ? 'opacity-50 cursor-not-allowed' : `${hoverBgColor} transition-colors`}
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`} // azul-selecao -> blue-500
   >
@@ -27,10 +26,10 @@ const ActionButton: React.FC<{ onClick: () => void; disabled: boolean; icon: Rea
   </button>
 );
 
-export const Toolbar: React.FC<ToolbarProps> = ({ onCompare, onExportPdf, onExportCsv, canCompare, canExport, isComparing }) => {
+export const Toolbar: React.FC<ToolbarProps> = ({ onCompare, onExportCsv, canCompare, canExport, isComparing }) => {
   return (
     <div className="w-full bg-white shadow-md p-3 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-10"> {/* branco -> white */}
-      <h1 className={`font-['${FONTS.sans}'] ${TEXT_SIZES.title} font-bold text-blue-800 mb-2 sm:mb-0`}> {/* azul-juridico -> blue-800 */}
+      <h1 className={`font-['${FONTS.DEFAULT}'] ${TEXT_SIZES.XXLARGE} font-bold text-blue-800 mb-2 sm:mb-0`}> {/* azul-juridico -> blue-800 */}
         ClauseDiff
       </h1>
       <div className="flex items-center space-x-2 sm:space-x-3">

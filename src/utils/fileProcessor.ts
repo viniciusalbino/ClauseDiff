@@ -1,16 +1,5 @@
 import { DocumentData } from '../../types';
 
-// Utility function to escape HTML characters and convert newlines for display
-const escapeHtmlAndNewlines = (text: string): string => {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .replace(/\n/g, '<br />');
-};
-
 export const processDocxFile = async (file: File): Promise<DocumentData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

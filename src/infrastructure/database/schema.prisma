@@ -26,6 +26,7 @@ model User {
   accounts   Account[]
   sessions   Session[]
   billingAccount BillingAccount?
+  auditLogs  AuditLog[]
   // Relations to accounts, sessions, tokens will be added in next sub-tasks
   @@index([role])
   @@index([createdAt])
@@ -86,4 +87,20 @@ model BillingAccount {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   // Adicione outros campos conforme necessário para billing
+}
+
+/// Tabela de auditoria e logging de eventos de autenticação e segurança
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventType  String   // Ex: login, logout, failed_login, password_change, etc
+  ip         String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+  details    Json?
+  // Adicione outros campos conforme necessário
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
 } 

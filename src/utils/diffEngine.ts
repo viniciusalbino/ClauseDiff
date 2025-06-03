@@ -1,4 +1,4 @@
-import { ComparisonResult, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL, DiffOperation } from '../../types';
+import { ComparisonResult, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '../../types';
 
 const escapeHtml = (text: string): string => {
   return text

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ComparisonResult, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '../../types';
+import { ComparisonResult, DIFF_INSERT, DIFF_EQUAL } from '../../types';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { FONTS, TEXT_SIZES } from '../../constants';
 
