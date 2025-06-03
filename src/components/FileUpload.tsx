@@ -73,6 +73,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, label, id,
 
   return (
     <div
+      data-testid="file-upload-dropzone"
       className={`w-full p-4 border-2 ${borderClass} border-dashed rounded-lg transition-colors duration-200 ease-in-out ${bgColorClass} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -81,6 +82,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, label, id,
       onClick={() => !disabled && document.getElementById(id)?.click()}
     >
       <input
+        data-testid="file-upload-input"
         type="file"
         id={id}
         accept={allowedFileExtensions}

@@ -42,6 +42,11 @@
 - `test/integration/` – Integration tests for end-to-end flows.
 - `docs/architecture/` – Architecture, migration, and technical documentation.
 - `docs/testing/` – Testing strategy and coverage documentation.
+- `app/auth/[...nextauth]/route.ts` – Placeholder route for authentication (Next.js 14 App Router, no logic yet).
+- `src/presentation/providers/AuthProvider.tsx` – Skeleton React context/provider for authentication (no logic yet).
+- `docs/architecture/auth-integration.md` – Documentation of future authentication integration points and extension options.
+- `src/infrastructure/external-services/analytics.ts` – Placeholder for future analytics integration (no logic yet).
+- `src/infrastructure/external-services/payments.ts` – Placeholder for future payments integration (no logic yet).
 
 ### Notes
 
@@ -78,15 +83,15 @@
 
 - [x] 4.0 Configurar e Garantir Qualidade de Código, Testes e Automação
   - [x] 4.1 Configurar cobertura de testes unitários (90%+).
-  - [ ] 4.2 Escrever/atualizar testes unitários para módulos migrados.
-  - [ ] 4.3 Escrever testes de integração para fluxos críticos.
-  - [ ] 4.4 Configurar automação de build, lint, test e deploy no Netlify.
-  - [ ] 4.5 Monitorar cobertura e qualidade de código continuamente.
+  - [x] 4.2 Escrever/atualizar testes unitários para módulos migrados.
+  - [x] 4.3 Escrever testes de integração para fluxos críticos.
+  - [x] 4.4 Configurar automação de build, lint, test e deploy no Netlify.
+  - [x] 4.5 Monitorar cobertura e qualidade de código continuamente.
 
-- [ ] 5.0 Preparar Estrutura para Autenticação e Futuras Expansões
-  - [ ] 5.1 Criar estrutura de rotas e providers para autenticação (sem implementar lógica).
-  - [ ] 5.2 Documentar pontos de integração para autenticação futura.
-  - [ ] 5.3 Preparar estrutura para futuras integrações (analytics, pagamentos, etc.).
+- [x] 5.0 Preparar Estrutura para Autenticação e Futuras Expansões
+  - [x] 5.1 Criar estrutura de rotas e providers para autenticação (sem implementar lógica).
+  - [x] 5.2 Documentar pontos de integração para autenticação futura.
+  - [x] 5.3 Preparar estrutura para futuras integrações (analytics, pagamentos, etc.).
 
 - [ ] 6.0 Documentar Arquitetura, Padrões e Processo de Migração
   - [ ] 6.1 Documentar arquitetura e decisões técnicas em `docs/architecture/`.
