@@ -114,3 +114,20 @@ Since this application is entirely client-side and relies on CDN-hosted librarie
     Once the server is running, open your web browser and navigate to the local address provided by the server (e.g., `http://localhost:3000` or `http://localhost:8000`). You should see `index.html` rendered.
 
 **Note:** Directly opening `index.html` via the `file:///` protocol might not work correctly due to browser security restrictions related to ES modules or other web features. Always use a local HTTP server.
+
+## 7. Code Quality & Coverage Monitoring
+
+ClauseDiff enforces code quality and test coverage automatically:
+
+- **Linting**: All code is checked with ESLint (see `.eslintrc.js`). Linting runs on every build and pre-commit (via Husky).
+- **Test Coverage**: Jest collects coverage on every test run. Coverage reports are output to the `coverage/` directory in both text and lcov formats.
+- **Build/Deploy Automation**: On Netlify (and locally), the build process runs `npm run lint` and `npm test` before building. If linting or tests (including coverage thresholds) fail, the build and deploy are blocked.
+- **Viewing Coverage**: After running `npm test`, open `coverage/lcov-report/index.html` in your browser for a detailed coverage report.
+- **Thresholds**: The minimum coverage threshold is currently set to 10% (for incremental migration) and can be raised as coverage improves (see `jest.config.cjs`).
+
+**Best Practices:**
+- Always check the output of `npm run lint` and `npm test` before pushing changes.
+- Review coverage reports to identify untested code.
+- All contributors are expected to maintain or improve code quality and coverage.
+
+---
