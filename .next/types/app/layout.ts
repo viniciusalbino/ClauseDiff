@@ -1,4 +1,4 @@
-// File: /Users/viniciusalbino/Documents/GitHub/clausediff/app/layout.tsx
+// File: /Users/viniciusalbino/Documents/GitHub/clausediff.nosync/app/layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

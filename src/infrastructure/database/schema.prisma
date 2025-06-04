@@ -1,6 +1,3 @@
-// Prisma schema for ClauseDiff authentication system
-// User model with required and optional fields for robust authentication
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,48 +9,47 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String
-  firstName  String
-  lastName   String
-  city       String?  // optional
-  state      String?  // optional
-  cpf        String?  @unique // optional, unique if provided
-  role       Role     @default(USER)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  accounts   Account[]
-  sessions   Session[]
+  id             String          @id @default(uuid())
+  email          String          @unique
+  password       String?
+  firstName      String?
+  lastName       String?
+  city           String?
+  state          String?
+  cpf            String?         @unique
+  role           Role            @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  name           String?
+  image          String?
+  emailVerified  DateTime?
+  accounts       Account[]
+  auditLogs      AuditLog[]
   billingAccount BillingAccount?
-  auditLogs  AuditLog[]
-  // Relations to accounts, sessions, tokens will be added in next sub-tasks
+  sessions       Session[]
+
   @@index([role])
   @@index([createdAt])
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  
-  access_token       String?  
-  expires_at         Int?     
-  token_type         String?  
-  scope              String?  
-  id_token           String?  
-  session_state      String?  
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
   @@index([userId])
   @@index([provider])
-  @@unique([provider, providerAccountId])
 }
 
 model Session {
@@ -62,6 +58,7 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expires])
 }
@@ -69,38 +66,41 @@ model Session {
 model VerificationToken {
   identifier String
   token      String   @unique
-  expires   DateTime
+  expires    DateTime
 
   @@unique([identifier, token])
 }
 
 /// Modelo para expansão futura de cobrança (billing)
 model BillingAccount {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Para integração futura com gateways de pagamento (ex: Stripe, MercadoPago)
-  externalId    String?  // ID do cliente no gateway de pagamento
-  plan          String?  // Nome ou código do plano de assinatura
-  status        String?  // Status da assinatura (ativo, cancelado, trial, etc)
-  expiresAt     DateTime? // Data de expiração da assinatura
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  // Adicione outros campos conforme necessário para billing
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  externalId String?
+  plan       String?
+  status     String?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Tabela de auditoria e logging de eventos de autenticação e segurança
 model AuditLog {
-  id         String   @id @default(uuid())
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  eventType  String   // Ex: login, logout, failed_login, password_change, etc
-  ip         String?
-  userAgent  String?
-  timestamp  DateTime @default(now())
-  details    Json?
-  // Adicione outros campos conforme necessário
+  id        String   @id @default(uuid())
+  userId    String?
+  eventType String
+  ip        String?
+  userAgent String?
+  timestamp DateTime @default(now())
+  details   Json?
+  user      User?    @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@index([eventType])
   @@index([timestamp])
-} 
+}
+
+enum Role {
+  USER
+  ADMIN
+}

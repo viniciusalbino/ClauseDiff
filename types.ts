@@ -71,3 +71,57 @@ export interface ComparisonResult {
     text: string;
   }>;
 }
+
+// NextAuth type augmentations
+import type { DefaultSession, DefaultUser } from "next-auth";
+import type { DefaultJWT } from "next-auth/jwt";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      emailVerified?: string | Date | null;
+      role?: string | null; // Use string instead of Prisma enum to avoid import issues
+    } & DefaultSession["user"];
+    accessToken?: string;
+  }
+
+  interface User extends DefaultUser {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    emailVerified?: string | Date | null;
+    role?: string | null; // Use string instead of Prisma enum
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT extends DefaultJWT {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    picture?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    emailVerified?: string | Date | null;
+    role?: string | null; // Use string instead of Prisma enum
+    accessToken?: string;
+  }
+}
+
+// You can also define other global types for your application below
+// For example:
+// export interface MyCustomType {
+//   property: string;
+// }
+
+// Ensure this file is treated as a module.
+export {};

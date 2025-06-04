@@ -39,6 +39,21 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
+      keyframes: {
+        "shimmer-slide": {
+          "0%": { transform: "translateX(-200%)" }, // Start further left
+          "50%": { transform: "translateX(200%)" }, // Move further right
+          "100%": { transform: "translateX(-200%)" }, // Reset to start for smooth loop
+        },
+        "spin-around": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+      },
+      animation: {
+        "shimmer-slide": "shimmer-slide var(--speed, 3s) ease-in-out infinite",
+        "spin-around": "spin-around 0.8s linear infinite", // Slightly slower spin
+      },
     },
   },
   plugins: [],
