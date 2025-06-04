@@ -33,7 +33,7 @@
   - [x] 2.1 Configurar Auth.js com TypeScript type-safe
   - [x] 2.2 Integrar adapter Prisma com customizações para logging e auditoria
   - [x] 2.3 Implementar provedor de credenciais (email/senha) com validação Zod e hash bcrypt + salt
-  - [ ] 2.4 Implementar provedor Google OAuth com escopo mínimo necessário
+  - [x] 2.4 Implementar provedor Google OAuth com escopo mínimo necessário
   - [ ] 2.5 Implementar rotação de tokens JWT com refresh strategy
   - [ ] 2.6 Implementar proteção CSRF avançada
   - [ ] 2.7 Testar fluxos de cadastro, login, logout e recuperação de senha

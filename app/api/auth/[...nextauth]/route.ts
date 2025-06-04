@@ -49,6 +49,12 @@ const credentialsSchema = z.object({
   password: z.string().min(6),
 });
 
+// JWT token configuration for security and rotation
+const JWT_MAX_AGE = 15 * 60; // 15 minutes - short-lived access tokens for security
+const JWT_REFRESH_THRESHOLD = 5 * 60; // 5 minutes - refresh when 5 minutes left
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days - long-lived session
+const SESSION_UPDATE_AGE = 24 * 60 * 60; // 24 hours - update session daily
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -116,6 +122,11 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt" as const,
+    maxAge: SESSION_MAX_AGE, // 30 days - rolling session
+    updateAge: SESSION_UPDATE_AGE, // Update session every 24 hours
+  },
+  jwt: {
+    maxAge: JWT_MAX_AGE, // 15 minutes - short-lived for security
   },
   pages: {
     signIn: "/login",
@@ -161,11 +172,15 @@ export const authOptions: AuthOptions = {
       }
       return true; // Allow sign in
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      const now = Math.floor(Date.now() / 1000);
+      
       // If it's a new user or new sign-in, 'user' object will be available.
-      // Persist the user.id and other essential fields to the token.
       if (user?.id) {
+        // Fresh login - set initial token data
         token.id = user.id;
+        token.iat = now;
+        token.exp = now + JWT_MAX_AGE;
         
         // Fetch the complete user from DB to ensure all fields are fresh, especially 'role'.
         const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
@@ -187,7 +202,57 @@ export const authOptions: AuthOptions = {
           token.lastName = user.lastName || null;
           token.emailVerified = user.emailVerified || null;
         }
+        
+        return token;
       }
+
+      // Token rotation logic: Check if token is close to expiry and refresh if needed
+      const timeUntilExpiry = (token.exp as number) - now;
+      
+      if (timeUntilExpiry < JWT_REFRESH_THRESHOLD) {
+        console.log("JWT token is close to expiry, rotating...", {
+          currentTime: now,
+          tokenExp: token.exp,
+          timeUntilExpiry,
+          threshold: JWT_REFRESH_THRESHOLD
+        });
+        
+        // Rotate the token by creating a new one with fresh expiry
+        const newToken = {
+          ...token,
+          iat: now,
+          exp: now + JWT_MAX_AGE,
+        };
+        
+        // Refresh user data from database to ensure it's current
+        if (token.id) {
+          try {
+            const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
+            if (dbUser) {
+              newToken.name = dbUser.name || `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || null;
+              newToken.email = dbUser.email;
+              newToken.picture = dbUser.image;
+              newToken.role = dbUser.role;
+              newToken.firstName = dbUser.firstName;
+              newToken.lastName = dbUser.lastName;
+              newToken.emailVerified = dbUser.emailVerified;
+            }
+          } catch (error) {
+            console.error("Error refreshing user data during token rotation:", error);
+            // Continue with existing token data if DB fetch fails
+          }
+        }
+        
+        console.log("JWT token rotated successfully", {
+          oldExp: token.exp,
+          newExp: newToken.exp,
+          newIat: newToken.iat
+        });
+        
+        return newToken;
+      }
+      
+      // Token is still valid, return as-is
       return token;
     },
     async session({ session, token }) {
@@ -201,6 +266,15 @@ export const authOptions: AuthOptions = {
         session.user.firstName = token.firstName as string | null | undefined;
         session.user.lastName = token.lastName as string | null | undefined;
         session.user.emailVerified = token.emailVerified as (Date | string | null | undefined);
+        
+        // Add JWT metadata for debugging in development
+        if (process.env.NODE_ENV === "development") {
+          session.debug = {
+            tokenIat: token.iat,
+            tokenExp: token.exp,
+            timeUntilExpiry: (token.exp as number) - Math.floor(Date.now() / 1000),
+          };
+        }
       }
       return session;
     },

@@ -1,132 +1,227 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useEffect } from "react";
-
-// Placeholder for ClauseDiff Icon
-const ClauseDiffIcon = () => (
-  <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-  </svg>
-);
-
-// Success checkmark icon
-const CheckIcon = () => (
-  <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-  </svg>
-);
+import React, { useEffect, useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function SuccessPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { data: session, status, update } = useSession();
+  const [refreshCount, setRefreshCount] = useState(0);
 
+  // Auto-refresh session every 30 seconds to test token rotation
   useEffect(() => {
-    // If not authenticated, redirect to login
-    if (status === "loading") return; // Still loading
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [session, status, router]);
+    const interval = setInterval(async () => {
+      if (session) {
+        console.log("Auto-refreshing session to test JWT token rotation...");
+        await update();
+        setRefreshCount(prev => prev + 1);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [session, update]);
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Carregando...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Carregando...</p>
         </div>
       </div>
     );
   }
 
   if (!session) {
-    return null; // Will redirect via useEffect
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-lg">
+          <div className="text-center p-6">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Sessão Expirada</h2>
+            <p className="text-gray-600 mb-4">
+              Sua sessão expirou. Por favor, faça login novamente.
+            </p>
+            <button 
+              onClick={() => window.location.href = '/login'}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Ir para Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-between p-4">
-      <header className="w-full max-w-6xl mx-auto flex justify-between items-center py-4 px-2 sm:px-0">
-        <Link href="/" className="flex items-center text-2xl font-semibold text-slate-700 hover:text-blue-600">
-          <ClauseDiffIcon />
-          ClauseDiff
-        </Link>
-        <Link href="/" className="text-sm text-slate-600 hover:text-blue-600 hover:underline">
-          Ir para Home
-        </Link>
-      </header>
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('pt-BR');
+  };
 
-      <main className="flex flex-col items-center justify-center w-full flex-grow">
-        <div className="w-full max-w-md p-8 space-y-8 bg-white shadow-xl rounded-lg text-center">
-          <CheckIcon />
-          
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">
-              Login realizado com sucesso!
-            </h2>
-            <p className="text-sm text-slate-600">
-              Bem-vindo ao ClauseDiff
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds <= 0) return 'Expirado';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg">
+          <div className="text-center p-6">
+            <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-green-700 mb-2">Login Realizado com Sucesso!</h1>
+            <p className="text-gray-600">
+              Bem-vindo(a) ao ClauseDiff. Sua autenticação foi concluída com sucesso.
             </p>
           </div>
+        </div>
 
-          {/* User Information */}
-          <div className="border-t border-slate-200 pt-6">
-            <div className="flex items-center justify-center mb-4">
+        {/* User Information */}
+        <div className="bg-white rounded-lg shadow-lg">
+          <div className="p-6">
+            <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
+              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+              Informações do Usuário
+            </h2>
+            
+            <div className="flex items-center space-x-4 mb-4">
               {session.user?.image && (
                 <img
                   src={session.user.image}
-                  alt={session.user.name || "User"}
-                  className="w-16 h-16 rounded-full border-2 border-slate-200"
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full border-2 border-gray-200"
                 />
               )}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {session.user?.name || `${session.user?.firstName || ''} ${session.user?.lastName || ''}`.trim() || 'Usuário'}
+                </h3>
+                <p className="text-gray-600">{session.user?.email}</p>
+                {session.user?.role && (
+                  <span className="inline-block bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded-md mt-1">
+                    {session.user.role}
+                  </span>
+                )}
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg text-slate-900">
-                {session.user?.name}
-              </h3>
-              <p className="text-sm text-slate-600">
-                {session.user?.email}
-              </p>
-              {(session.user?.firstName || session.user?.lastName) && (
-                <p className="text-xs text-slate-500">
-                  {session.user.firstName} {session.user.lastName}
-                </p>
-              )}
-              {session.user?.role && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {session.user.role}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-3 pt-6">
-            <Link
-              href="/"
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Continuar para o ClauseDiff
-            </Link>
+            <hr className="my-4 border-gray-200" />
             
-            <Link
-              href="/profile"
-              className="w-full flex justify-center py-2.5 px-4 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Ver meu perfil
-            </Link>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Nome Completo:</span>
+                <p className="text-gray-600">{session.user?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Email Verificado:</span>
+                <p className="text-gray-600">{formatDate(session.user?.emailVerified)}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Primeiro Nome:</span>
+                <p className="text-gray-600">{session.user?.firstName || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Último Nome:</span>
+                <p className="text-gray-600">{session.user?.lastName || 'N/A'}</p>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
 
-      <footer className="w-full max-w-6xl mx-auto text-center py-6 px-2 sm:px-0">
-        <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} ClauseDiff. Todos os direitos reservados.
-        </p>
-      </footer>
+        {/* JWT Token Debug Information (Development Only) */}
+        {process.env.NODE_ENV === 'development' && session.debug && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg shadow-lg">
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                <h2 className="text-lg font-semibold text-orange-800">Debug: JWT Token Information</h2>
+                <span className="ml-auto text-xs bg-white border border-orange-300 text-orange-700 px-2 py-1 rounded">
+                  Development Only
+                </span>
+              </div>
+              <p className="text-orange-700 text-sm mb-4">
+                Informações de debug sobre rotação de tokens JWT (visível apenas em desenvolvimento)
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+                <div>
+                  <span className="font-medium text-orange-700">Token Issued At:</span>
+                  <p className="text-orange-800">
+                    {session.debug.tokenIat ? new Date(session.debug.tokenIat * 1000).toLocaleTimeString('pt-BR') : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-orange-700">Token Expires At:</span>
+                  <p className="text-orange-800">
+                    {session.debug.tokenExp ? new Date(session.debug.tokenExp * 1000).toLocaleTimeString('pt-BR') : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-orange-700">Tempo Restante:</span>
+                  <p className="text-orange-800 font-mono">
+                    {session.debug.timeUntilExpiry !== undefined ? formatTimeRemaining(session.debug.timeUntilExpiry) : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              
+              <hr className="my-4 border-orange-200" />
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-orange-700">
+                    Auto-refresh Count: <span className="font-mono font-bold">{refreshCount}</span>
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Sessão será atualizada automaticamente a cada 30 segundos para testar rotação de tokens.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    console.log("Manual session refresh triggered");
+                    await update();
+                    setRefreshCount(prev => prev + 1);
+                  }}
+                  className="border border-orange-300 text-orange-700 hover:bg-orange-100 py-2 px-4 rounded-lg text-sm transition-colors"
+                >
+                  Atualizar Agora
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="bg-white rounded-lg shadow-lg">
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors"
+              >
+                Ir para o App Principal
+              </button>
+              <button 
+                onClick={() => window.location.href = '/profile'}
+                className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 py-3 px-4 rounded-lg transition-colors"
+              >
+                Ver Perfil
+              </button>
+              <button 
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg transition-colors"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

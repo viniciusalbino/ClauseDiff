@@ -89,6 +89,12 @@ declare module "next-auth" {
       role?: string | null; // Use string instead of Prisma enum to avoid import issues
     } & DefaultSession["user"];
     accessToken?: string;
+    // Debug information (only in development)
+    debug?: {
+      tokenIat?: number;
+      tokenExp?: number;
+      timeUntilExpiry?: number;
+    };
   }
 
   interface User extends DefaultUser {
