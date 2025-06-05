@@ -1,0 +1,333 @@
+name: ⚡ Test Performance & Flaky Test Detection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC to detect flaky tests
+    - cron: '0 2 * * *'
+
+jobs:
+  test-performance:
+    name: ⚡ Test Performance Tracking
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        test-suite: ['unit', 'integration', 'security']
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: ⏱️ Run Performance Tests with Timing
+        id: test-timing
+        run: |
+          echo "Running ${{ matrix.test-suite }} tests with performance tracking..."
+          
+          # Create performance log directory
+          mkdir -p test-performance
+          
+          START_TIME=$(date +%s%N)
+          
+          case "${{ matrix.test-suite }}" in
+            "unit")
+              npm test -- --testPathIgnorePatterns="cypress|integration|security|e2e" --passWithNoTests --verbose --json --outputFile=test-performance/unit-results.json
+              ;;
+            "integration")
+              npm test -- --testPathPatterns="integration" --passWithNoTests --verbose --json --outputFile=test-performance/integration-results.json
+              ;;
+            "security")
+              npm test -- --testPathPatterns="security" --passWithNoTests --verbose --json --outputFile=test-performance/security-results.json
+              ;;
+          esac
+          
+          END_TIME=$(date +%s%N)
+          DURATION=$(((END_TIME - START_TIME) / 1000000)) # Convert to milliseconds
+          
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "Test suite ${{ matrix.test-suite }} completed in ${DURATION}ms"
+
+      - name: 📊 Parse Test Performance Data
+        run: |
+          # Create performance summary
+          node -e "
+            const fs = require('fs');
+            const path = './test-performance/${{ matrix.test-suite }}-results.json';
+            
+            if (fs.existsSync(path)) {
+              const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const duration = ${{ steps.test-timing.outputs.duration }};
+              
+              const summary = {
+                suite: '${{ matrix.test-suite }}',
+                timestamp: new Date().toISOString(),
+                duration: duration,
+                numTotalTests: results.numTotalTests || 0,
+                numPassedTests: results.numPassedTests || 0,
+                numFailedTests: results.numFailedTests || 0,
+                success: results.success || false,
+                testResults: results.testResults?.map(test => ({
+                  name: test.name,
+                  status: test.status,
+                  duration: test.endTime - test.startTime,
+                  numPassingTests: test.numPassingTests,
+                  numFailingTests: test.numFailingTests
+                })) || []
+              };
+              
+              fs.writeFileSync('./test-performance/${{ matrix.test-suite }}-summary.json', JSON.stringify(summary, null, 2));
+              
+              console.log('Performance Summary for ${{ matrix.test-suite }}:');
+              console.log('- Total Duration:', duration + 'ms');
+              console.log('- Total Tests:', summary.numTotalTests);
+              console.log('- Passed Tests:', summary.numPassedTests);
+              console.log('- Failed Tests:', summary.numFailedTests);
+            }
+          "
+
+      - name: 📈 Check Performance Regression
+        id: regression-check
+        run: |
+          # Define performance thresholds (in milliseconds)
+          case "${{ matrix.test-suite }}" in
+            "unit")
+              THRESHOLD=30000  # 30 seconds for unit tests
+              ;;
+            "integration")
+              THRESHOLD=60000  # 60 seconds for integration tests
+              ;;
+            "security")
+              THRESHOLD=45000  # 45 seconds for security tests
+              ;;
+          esac
+          
+          DURATION=${{ steps.test-timing.outputs.duration }}
+          
+          echo "threshold=$THRESHOLD" >> $GITHUB_OUTPUT
+          echo "current_duration=$DURATION" >> $GITHUB_OUTPUT
+          
+          if [ $DURATION -gt $THRESHOLD ]; then
+            echo "regression=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Performance regression detected: $DURATION ms > $THRESHOLD ms threshold"
+          else
+            echo "regression=false" >> $GITHUB_OUTPUT
+            echo "✅ Performance within acceptable range: $DURATION ms ≤ $THRESHOLD ms"
+          fi
+
+      - name: 📤 Upload Performance Data
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-performance-${{ matrix.test-suite }}
+          path: test-performance/
+          retention-days: 30
+
+  flaky-test-detection:
+    name: 🔍 Flaky Test Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[test-stability]')
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 Run Tests Multiple Times for Flaky Detection
+        id: flaky-detection
+        run: |
+          mkdir -p flaky-test-results
+          
+          # Run tests 5 times to detect flaky behavior
+          for i in {1..5}; do
+            echo "Running test iteration $i/5..."
+            
+            npm test -- --testPathIgnorePatterns="cypress|e2e" --passWithNoTests --json --outputFile=flaky-test-results/run-$i.json || true
+            
+            # Small delay between runs
+            sleep 5
+          done
+          
+          echo "Flaky test detection completed"
+
+      - name: 📊 Analyze Flaky Test Results
+        run: |
+          node -e "
+            const fs = require('fs');
+            const runs = [];
+            
+            // Load all test runs
+            for (let i = 1; i <= 5; i++) {
+              const file = \`flaky-test-results/run-\${i}.json\`;
+              if (fs.existsSync(file)) {
+                const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+                runs.push(data);
+              }
+            }
+            
+            // Analyze test stability
+            const testStability = new Map();
+            
+            runs.forEach((run, runIndex) => {
+              if (run.testResults) {
+                run.testResults.forEach(testFile => {
+                  testFile.assertionResults?.forEach(test => {
+                    const testKey = \`\${testFile.name}::\${test.title}\`;
+                    
+                    if (!testStability.has(testKey)) {
+                      testStability.set(testKey, {
+                        name: test.title,
+                        file: testFile.name,
+                        runs: [],
+                        passCount: 0,
+                        failCount: 0
+                      });
+                    }
+                    
+                    const testData = testStability.get(testKey);
+                    testData.runs.push({
+                      run: runIndex + 1,
+                      status: test.status,
+                      duration: test.duration || 0
+                    });
+                    
+                    if (test.status === 'passed') {
+                      testData.passCount++;
+                    } else {
+                      testData.failCount++;
+                    }
+                  });
+                });
+              }
+            });
+            
+            // Identify flaky tests (tests that don't consistently pass or fail)
+            const flakyTests = [];
+            testStability.forEach(test => {
+              if (test.passCount > 0 && test.failCount > 0) {
+                flakyTests.push({
+                  ...test,
+                  flakyScore: (test.failCount / (test.passCount + test.failCount)) * 100
+                });
+              }
+            });
+            
+            // Generate report
+            const report = {
+              timestamp: new Date().toISOString(),
+              totalRuns: runs.length,
+              totalTests: testStability.size,
+              flakyTests: flakyTests.sort((a, b) => b.flakyScore - a.flakyScore),
+              summary: {
+                flakyTestCount: flakyTests.length,
+                stabilityScore: ((testStability.size - flakyTests.length) / testStability.size * 100) || 0
+              }
+            };
+            
+            fs.writeFileSync('flaky-test-results/flaky-report.json', JSON.stringify(report, null, 2));
+            
+            // Output summary
+            console.log('🔍 Flaky Test Detection Results:');
+            console.log(\`- Total Tests Analyzed: \${testStability.size}\`);
+            console.log(\`- Flaky Tests Found: \${flakyTests.length}\`);
+            console.log(\`- Test Stability Score: \${report.summary.stabilityScore.toFixed(2)}%\`);
+            
+            if (flakyTests.length > 0) {
+              console.log('\\n⚠️ Flaky Tests Detected:');
+              flakyTests.slice(0, 10).forEach(test => {
+                console.log(\`  - \${test.name} (\${test.flakyScore.toFixed(1)}% flaky)\`);
+              });
+            }
+          "
+
+      - name: 💬 Comment Flaky Test Report
+        if: github.event_name == 'schedule' && hashFiles('flaky-test-results/flaky-report.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            if (fs.existsSync('flaky-test-results/flaky-report.json')) {
+              const report = JSON.parse(fs.readFileSync('flaky-test-results/flaky-report.json', 'utf8'));
+              
+              const commentBody = `
+              ## 🔍 Nightly Flaky Test Detection Report
+              
+              **Test Stability Score**: ${report.summary.stabilityScore.toFixed(2)}%
+              
+              | Metric | Value |
+              |--------|-------|
+              | **Total Tests** | ${report.totalTests} |
+              | **Flaky Tests** | ${report.flakyTests.length} |
+              | **Test Runs** | ${report.totalRuns} |
+              | **Stability Score** | ${report.summary.stabilityScore.toFixed(2)}% |
+              
+              ${report.flakyTests.length > 0 ? `
+              ### ⚠️ Flaky Tests Detected
+              
+              ${report.flakyTests.slice(0, 10).map(test => 
+                \`- **\${test.name}** (\${test.flakyScore.toFixed(1)}% failure rate) in \${test.file}\`
+              ).join('\\n')}
+              
+              **Action Required**: Please investigate and fix these flaky tests to improve test reliability.
+              ` : '✅ **No flaky tests detected** - All tests are stable!'}
+              
+              ---
+              *Report generated on ${new Date(report.timestamp).toLocaleString()} UTC*
+              `;
+              
+              // Create an issue for flaky tests if any found
+              if (report.flakyTests.length > 0) {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: \`🔍 Flaky Tests Detected - \${report.flakyTests.length} tests need attention\`,
+                  body: commentBody,
+                  labels: ['bug', 'test-stability', 'flaky-test']
+                });
+              }
+            }
+
+      - name: 📤 Upload Flaky Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: flaky-test-analysis
+          path: flaky-test-results/
+          retention-days: 30
+
+      - name: ❌ Fail on High Flaky Test Count
+        run: |
+          if [ -f flaky-test-results/flaky-report.json ]; then
+            FLAKY_COUNT=$(node -pe "JSON.parse(require('fs').readFileSync('flaky-test-results/flaky-report.json', 'utf8')).flakyTests.length")
+            STABILITY_SCORE=$(node -pe "JSON.parse(require('fs').readFileSync('flaky-test-results/flaky-report.json', 'utf8')).summary.stabilityScore")
+            
+            echo "Flaky test count: $FLAKY_COUNT"
+            echo "Stability score: $STABILITY_SCORE%"
+            
+            # Fail if more than 10% of tests are flaky or stability score below 90%
+            if [ "$FLAKY_COUNT" -gt 5 ] || (( $(echo "$STABILITY_SCORE < 90" | bc -l) )); then
+              echo "❌ Too many flaky tests detected or stability score too low"
+              echo "Please fix flaky tests before merging"
+              exit 1
+            fi
+          fi 

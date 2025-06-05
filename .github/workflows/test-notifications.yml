@@ -1,0 +1,490 @@
+name: 📊 Test Monitoring & Notifications
+
+on:
+  workflow_run:
+    workflows: ["🧪 Comprehensive Testing Suite", "📊 Coverage Report & PR Comments", "⚡ Test Performance & Flaky Test Detection"]
+    types:
+      - completed
+  schedule:
+    # Generate daily reports at 8 AM UTC
+    - cron: '0 8 * * *'
+
+jobs:
+  test-notifications:
+    name: 📢 Test Result Notifications
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.workflow_run.conclusion != 'skipped'
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: 📊 Get Workflow Run Details
+        id: workflow-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const conclusion = workflowRun.conclusion;
+            const workflowName = workflowRun.name;
+            const duration = Math.round((new Date(workflowRun.updated_at) - new Date(workflowRun.created_at)) / 1000);
+            
+            // Count job statuses
+            const jobStats = jobs.jobs.reduce((acc, job) => {
+              acc[job.conclusion] = (acc[job.conclusion] || 0) + 1;
+              return acc;
+            }, {});
+            
+            core.setOutput('conclusion', conclusion);
+            core.setOutput('workflow_name', workflowName);
+            core.setOutput('duration', duration);
+            core.setOutput('job_stats', JSON.stringify(jobStats));
+            core.setOutput('run_url', workflowRun.html_url);
+            core.setOutput('branch', workflowRun.head_branch);
+            core.setOutput('commit_sha', workflowRun.head_sha.substring(0, 7));
+
+      - name: 🔔 Send Success Notification
+        if: steps.workflow-details.outputs.conclusion == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowName = '${{ steps.workflow-details.outputs.workflow_name }}';
+            const duration = '${{ steps.workflow-details.outputs.duration }}';
+            const runUrl = '${{ steps.workflow-details.outputs.run_url }}';
+            const branch = '${{ steps.workflow-details.outputs.branch }}';
+            const commitSha = '${{ steps.workflow-details.outputs.commit_sha }}';
+            
+            const message = `
+            ## ✅ Test Suite Success
+            
+            **Workflow**: ${workflowName}
+            **Branch**: ${branch}
+            **Commit**: ${commitSha}
+            **Duration**: ${duration}s
+            **Status**: All tests passed successfully! 🎉
+            
+            [View Details](${runUrl})
+            `;
+            
+            // Create a success comment on the latest commit
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: '${{ github.event.workflow_run.head_sha }}',
+              body: message
+            });
+
+      - name: 🚨 Send Failure Notification
+        if: steps.workflow-details.outputs.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowName = '${{ steps.workflow-details.outputs.workflow_name }}';
+            const duration = '${{ steps.workflow-details.outputs.duration }}';
+            const runUrl = '${{ steps.workflow-details.outputs.run_url }}';
+            const branch = '${{ steps.workflow-details.outputs.branch }}';
+            const commitSha = '${{ steps.workflow-details.outputs.commit_sha }}';
+            const jobStats = JSON.parse('${{ steps.workflow-details.outputs.job_stats }}');
+            
+            const message = `
+            ## ❌ Test Suite Failure
+            
+            **Workflow**: ${workflowName}
+            **Branch**: ${branch}
+            **Commit**: ${commitSha}
+            **Duration**: ${duration}s
+            
+            ### Job Results
+            ${Object.entries(jobStats).map(([status, count]) => 
+              `- ${status}: ${count} job(s)`
+            ).join('\\n')}
+            
+            **Action Required**: Please check the failed tests and fix issues before merging.
+            
+            [View Details](${runUrl})
+            `;
+            
+            // Create a failure comment and issue
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: '${{ github.event.workflow_run.head_sha }}',
+              body: message
+            });
+            
+            // Create an issue for failed tests on main/develop branches
+            if (branch === 'main' || branch === 'develop') {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: \`🚨 Test Failure on \${branch} - \${workflowName}\`,
+                body: message,
+                labels: ['bug', 'test-failure', 'priority-high']
+              });
+            }
+
+  test-monitoring-dashboard:
+    name: 📊 Generate Test Monitoring Dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[dashboard]')
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: 📊 Fetch Recent Workflow Runs
+        id: fetch-data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Fetch last 30 days of workflow runs
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const testWorkflows = workflows.workflows.filter(w => 
+              w.name.includes('Test') || w.name.includes('Coverage') || w.name.includes('Performance')
+            );
+            
+            const allRuns = [];
+            
+            for (const workflow of testWorkflows) {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflow.id,
+                per_page: 50,
+                created: \`>=\${thirtyDaysAgo.toISOString()}\`
+              });
+              
+              allRuns.push(...runs.workflow_runs.map(run => ({
+                id: run.id,
+                name: workflow.name,
+                status: run.status,
+                conclusion: run.conclusion,
+                created_at: run.created_at,
+                updated_at: run.updated_at,
+                duration: Math.round((new Date(run.updated_at) - new Date(run.created_at)) / 1000),
+                branch: run.head_branch,
+                commit_sha: run.head_sha.substring(0, 7),
+                run_url: run.html_url
+              })));
+            }
+            
+            return allRuns.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      - name: 📈 Generate Dashboard Data
+        run: |
+          node -e "
+            const runs = ${{ steps.fetch-data.outputs.result }};
+            const fs = require('fs');
+            
+            // Calculate metrics
+            const totalRuns = runs.length;
+            const successfulRuns = runs.filter(r => r.conclusion === 'success').length;
+            const failedRuns = runs.filter(r => r.conclusion === 'failure').length;
+            const successRate = ((successfulRuns / totalRuns) * 100) || 0;
+            
+            // Calculate average duration by workflow
+            const workflowMetrics = runs.reduce((acc, run) => {
+              if (!acc[run.name]) {
+                acc[run.name] = {
+                  total: 0,
+                  successful: 0,
+                  failed: 0,
+                  totalDuration: 0,
+                  avgDuration: 0
+                };
+              }
+              
+              acc[run.name].total++;
+              acc[run.name].totalDuration += run.duration;
+              
+              if (run.conclusion === 'success') acc[run.name].successful++;
+              if (run.conclusion === 'failure') acc[run.name].failed++;
+              
+              return acc;
+            }, {});
+            
+            // Calculate averages
+            Object.keys(workflowMetrics).forEach(name => {
+              const metrics = workflowMetrics[name];
+              metrics.avgDuration = Math.round(metrics.totalDuration / metrics.total);
+              metrics.successRate = ((metrics.successful / metrics.total) * 100);
+            });
+            
+            // Recent trends (last 7 days vs previous 7 days)
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+            
+            const recentRuns = runs.filter(r => new Date(r.created_at) >= sevenDaysAgo);
+            const previousRuns = runs.filter(r => 
+              new Date(r.created_at) >= fourteenDaysAgo && 
+              new Date(r.created_at) < sevenDaysAgo
+            );
+            
+            const recentSuccessRate = ((recentRuns.filter(r => r.conclusion === 'success').length / recentRuns.length) * 100) || 0;
+            const previousSuccessRate = ((previousRuns.filter(r => r.conclusion === 'success').length / previousRuns.length) * 100) || 0;
+            const trend = recentSuccessRate - previousSuccessRate;
+            
+            const dashboard = {
+              generatedAt: new Date().toISOString(),
+              period: '30 days',
+              summary: {
+                totalRuns,
+                successfulRuns,
+                failedRuns,
+                successRate: successRate.toFixed(2),
+                averageDuration: Math.round(runs.reduce((sum, r) => sum + r.duration, 0) / totalRuns),
+                trend: {
+                  direction: trend > 0 ? 'up' : trend < 0 ? 'down' : 'stable',
+                  percentage: Math.abs(trend).toFixed(2)
+                }
+              },
+              workflowMetrics,
+              recentFailures: runs
+                .filter(r => r.conclusion === 'failure')
+                .slice(0, 10)
+                .map(r => ({
+                  workflow: r.name,
+                  branch: r.branch,
+                  commit: r.commit_sha,
+                  date: r.created_at,
+                  url: r.run_url
+                }))
+            };
+            
+            fs.writeFileSync('dashboard-data.json', JSON.stringify(dashboard, null, 2));
+            
+            console.log('📊 Test Dashboard Generated');
+            console.log(\`Total Runs: \${totalRuns}\`);
+            console.log(\`Success Rate: \${successRate.toFixed(2)}%\`);
+            console.log(\`Trend: \${dashboard.summary.trend.direction} \${dashboard.summary.trend.percentage}%\`);
+          "
+
+      - name: 📊 Generate Dashboard HTML
+        run: |
+          node -e "
+            const dashboard = JSON.parse(require('fs').readFileSync('dashboard-data.json', 'utf8'));
+            const fs = require('fs');
+            
+            const html = \`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Test Monitoring Dashboard</title>
+              <meta charset='utf-8'>
+              <meta name='viewport' content='width=device-width, initial-scale=1'>
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f5f7fa; }
+                .container { max-width: 1200px; margin: 0 auto; }
+                .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+                .metric-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .metric-value { font-size: 2em; font-weight: bold; margin-bottom: 5px; }
+                .metric-label { color: #666; font-size: 0.9em; }
+                .success { color: #28a745; }
+                .failure { color: #dc3545; }
+                .warning { color: #ffc107; }
+                .trend-up { color: #28a745; }
+                .trend-down { color: #dc3545; }
+                .trend-stable { color: #6c757d; }
+                .workflow-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+                th { background: #f8f9fa; font-weight: 600; }
+                .failures { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .failure-item { padding: 10px; border-left: 4px solid #dc3545; margin-bottom: 10px; background: #fff5f5; }
+              </style>
+            </head>
+            <body>
+              <div class='container'>
+                <div class='header'>
+                  <h1>🧪 Test Monitoring Dashboard</h1>
+                  <p>Generated on \${new Date(dashboard.generatedAt).toLocaleString()} | Period: \${dashboard.period}</p>
+                </div>
+                
+                <div class='metrics'>
+                  <div class='metric-card'>
+                    <div class='metric-value success'>\${dashboard.summary.successRate}%</div>
+                    <div class='metric-label'>Success Rate</div>
+                  </div>
+                  <div class='metric-card'>
+                    <div class='metric-value'>\${dashboard.summary.totalRuns}</div>
+                    <div class='metric-label'>Total Test Runs</div>
+                  </div>
+                  <div class='metric-card'>
+                    <div class='metric-value \${dashboard.summary.trend.direction === 'up' ? 'trend-up' : dashboard.summary.trend.direction === 'down' ? 'trend-down' : 'trend-stable'}'>
+                      \${dashboard.summary.trend.direction === 'up' ? '↗' : dashboard.summary.trend.direction === 'down' ? '↘' : '→'} \${dashboard.summary.trend.percentage}%
+                    </div>
+                    <div class='metric-label'>7-Day Trend</div>
+                  </div>
+                  <div class='metric-card'>
+                    <div class='metric-value'>\${dashboard.summary.averageDuration}s</div>
+                    <div class='metric-label'>Avg Duration</div>
+                  </div>
+                </div>
+                
+                <div class='workflow-table'>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Workflow</th>
+                        <th>Success Rate</th>
+                        <th>Total Runs</th>
+                        <th>Avg Duration</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      \${Object.entries(dashboard.workflowMetrics).map(([name, metrics]) => \`
+                        <tr>
+                          <td>\${name}</td>
+                          <td class='\${metrics.successRate >= 90 ? 'success' : metrics.successRate >= 70 ? 'warning' : 'failure'}'>\${metrics.successRate.toFixed(1)}%</td>
+                          <td>\${metrics.total}</td>
+                          <td>\${metrics.avgDuration}s</td>
+                          <td>\${metrics.successRate >= 90 ? '✅ Excellent' : metrics.successRate >= 70 ? '⚠️ Good' : '❌ Needs Attention'}</td>
+                        </tr>
+                      \`).join('')}
+                    </tbody>
+                  </table>
+                </div>
+                
+                \${dashboard.recentFailures.length > 0 ? \`
+                <div class='failures'>
+                  <h2>Recent Failures</h2>
+                  \${dashboard.recentFailures.map(failure => \`
+                    <div class='failure-item'>
+                      <strong>\${failure.workflow}</strong> on \${failure.branch} 
+                      <br><small>\${failure.commit} • \${new Date(failure.date).toLocaleString()}</small>
+                      <br><a href='\${failure.url}' target='_blank'>View Details</a>
+                    </div>
+                  \`).join('')}
+                </div>
+                \` : ''}
+              </div>
+            </body>
+            </html>
+            \`;
+            
+            fs.writeFileSync('test-dashboard.html', html);
+            console.log('📊 Dashboard HTML generated');
+          "
+
+      - name: 📤 Upload Dashboard
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-monitoring-dashboard
+          path: |
+            test-dashboard.html
+            dashboard-data.json
+          retention-days: 30
+
+      - name: 📊 Create Dashboard Issue
+        if: github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const dashboard = JSON.parse(require('fs').readFileSync('dashboard-data.json', 'utf8'));
+            
+            const issueBody = \`
+            ## 📊 Daily Test Monitoring Report
+            
+            **Generated**: \${new Date(dashboard.generatedAt).toLocaleString()}
+            **Period**: \${dashboard.period}
+            
+            ### 📈 Key Metrics
+            
+            | Metric | Value | Status |
+            |--------|-------|--------|
+            | **Success Rate** | **\${dashboard.summary.successRate}%** | \${dashboard.summary.successRate >= 90 ? '🟢 Excellent' : dashboard.summary.successRate >= 70 ? '🟡 Good' : '🔴 Needs Improvement'} |
+            | **Total Runs** | \${dashboard.summary.totalRuns} | - |
+            | **Average Duration** | \${dashboard.summary.averageDuration}s | - |
+            | **7-Day Trend** | \${dashboard.summary.trend.direction === 'up' ? '↗' : dashboard.summary.trend.direction === 'down' ? '↘' : '→'} \${dashboard.summary.trend.percentage}% | \${dashboard.summary.trend.direction === 'up' ? '🟢 Improving' : dashboard.summary.trend.direction === 'down' ? '🔴 Declining' : '🟡 Stable'} |
+            
+            ### 🔧 Workflow Performance
+            
+            \${Object.entries(dashboard.workflowMetrics).map(([name, metrics]) => 
+              \`- **\${name}**: \${metrics.successRate.toFixed(1)}% success rate (\${metrics.total} runs, avg \${metrics.avgDuration}s)\`
+            ).join('\\n')}
+            
+            \${dashboard.recentFailures.length > 0 ? \`
+            ### ⚠️ Recent Failures (\${dashboard.recentFailures.length})
+            
+            \${dashboard.recentFailures.slice(0, 5).map(failure => 
+              \`- [\${failure.workflow}](\${failure.url}) on \${failure.branch} (\${failure.commit})\`
+            ).join('\\n')}
+            \` : '✅ **No recent failures** - All systems running smoothly!'}
+            
+            ### 📋 Recommendations
+            
+            \${dashboard.summary.successRate < 90 ? '- 🎯 Focus on improving test stability to reach 90%+ success rate\\n' : ''}
+            \${dashboard.summary.trend.direction === 'down' ? '- 📉 Investigate declining trend in test success rate\\n' : ''}
+            \${dashboard.recentFailures.length > 5 ? '- 🔧 Address recurring test failures\\n' : ''}
+            \${dashboard.summary.averageDuration > 300 ? '- ⚡ Consider optimizing test execution time\\n' : ''}
+            
+            ---
+            *This report is automatically generated daily. Download the full dashboard from the [latest workflow run].*
+            \`;
+            
+            // Find existing daily report issue and close it
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'daily-report,test-monitoring'
+            });
+            
+            for (const issue of issues) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }
+            
+            // Create new daily report
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: \`📊 Daily Test Report - \${new Date().toISOString().split('T')[0]}\`,
+              body: issueBody,
+              labels: ['daily-report', 'test-monitoring', 'automated']
+            }); 

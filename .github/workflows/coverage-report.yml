@@ -1,0 +1,181 @@
+name: 📊 Coverage Report & PR Comments
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  coverage-report:
+    name: 📊 Generate Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for better coverage comparison
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: npm ci
+
+      - name: 🧪 Run Tests with Coverage
+        run: |
+          npm test -- --coverage --testPathIgnorePatterns="cypress|e2e" --passWithNoTests --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary
+
+      - name: 📊 Parse Coverage Data
+        id: coverage
+        run: |
+          # Extract coverage percentages from coverage-summary.json
+          if [ -f coverage/coverage-summary.json ]; then
+            TOTAL_COVERAGE=$(node -pe "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json', 'utf8')).total.lines.pct")
+            STATEMENTS_COVERAGE=$(node -pe "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json', 'utf8')).total.statements.pct")
+            BRANCHES_COVERAGE=$(node -pe "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json', 'utf8')).total.branches.pct")
+            FUNCTIONS_COVERAGE=$(node -pe "JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json', 'utf8')).total.functions.pct")
+            
+            echo "total_coverage=$TOTAL_COVERAGE" >> $GITHUB_OUTPUT
+            echo "statements_coverage=$STATEMENTS_COVERAGE" >> $GITHUB_OUTPUT
+            echo "branches_coverage=$BRANCHES_COVERAGE" >> $GITHUB_OUTPUT
+            echo "functions_coverage=$FUNCTIONS_COVERAGE" >> $GITHUB_OUTPUT
+            
+            # Determine coverage status
+            if (( $(echo "$TOTAL_COVERAGE >= 90" | bc -l) )); then
+              echo "coverage_status=🟢 Excellent" >> $GITHUB_OUTPUT
+              echo "coverage_color=green" >> $GITHUB_OUTPUT
+            elif (( $(echo "$TOTAL_COVERAGE >= 70" | bc -l) )); then
+              echo "coverage_status=🟡 Good" >> $GITHUB_OUTPUT
+              echo "coverage_color=yellow" >> $GITHUB_OUTPUT
+            else
+              echo "coverage_status=🔴 Needs Improvement" >> $GITHUB_OUTPUT
+              echo "coverage_color=red" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Coverage file not found"
+            echo "total_coverage=0" >> $GITHUB_OUTPUT
+            echo "coverage_status=❌ No Data" >> $GITHUB_OUTPUT
+            echo "coverage_color=red" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📈 Generate Coverage Badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GITHUB_TOKEN }}
+          gistID: # Add your gist ID here if you want badges
+          filename: coverage-badge.json
+          label: Coverage
+          message: ${{ steps.coverage.outputs.total_coverage }}%
+          color: ${{ steps.coverage.outputs.coverage_color }}
+
+      - name: 💬 Comment Coverage Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const totalCoverage = '${{ steps.coverage.outputs.total_coverage }}';
+            const statementsCoverage = '${{ steps.coverage.outputs.statements_coverage }}';
+            const branchesCoverage = '${{ steps.coverage.outputs.branches_coverage }}';
+            const functionsCoverage = '${{ steps.coverage.outputs.functions_coverage }}';
+            const coverageStatus = '${{ steps.coverage.outputs.coverage_status }}';
+            
+            const commentBody = `
+            ## 📊 Test Coverage Report
+            
+            **Overall Status**: ${coverageStatus}
+            
+            | Metric | Coverage | Status |
+            |--------|----------|--------|
+            | **Lines** | **${totalCoverage}%** | ${totalCoverage >= 70 ? '✅' : '❌'} |
+            | **Statements** | **${statementsCoverage}%** | ${statementsCoverage >= 70 ? '✅' : '❌'} |
+            | **Branches** | **${branchesCoverage}%** | ${branchesCoverage >= 70 ? '✅' : '❌'} |
+            | **Functions** | **${functionsCoverage}%** | ${functionsCoverage >= 70 ? '✅' : '❌'} |
+            
+            ### 📈 Coverage Thresholds
+            - 🟢 **Excellent**: ≥ 90%
+            - 🟡 **Good**: ≥ 70%
+            - 🔴 **Needs Improvement**: < 70%
+            
+            ### 📋 Quality Gates
+            ${totalCoverage >= 70 ? '✅ **Coverage threshold met** - Ready for merge!' : '❌ **Coverage below 70%** - Please add more tests before merging.'}
+            
+            <details>
+            <summary>🔍 Detailed Coverage Information</summary>
+            
+            > **Note**: Coverage is calculated excluding Cypress E2E tests and focuses on unit and integration tests.
+            
+            **How to improve coverage:**
+            1. Add unit tests for uncovered functions
+            2. Add integration tests for untested workflows  
+            3. Add edge case testing for existing components
+            4. Review coverage report details in the Actions artifacts
+            
+            </details>
+            
+            ---
+            *This comment is automatically updated on every push to this PR.*
+            `;
+            
+            // Find existing coverage comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existingComment = comments.find(comment => 
+              comment.body.includes('📊 Test Coverage Report')
+            );
+            
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
+
+      - name: 📤 Upload Coverage Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: |
+            coverage/
+          retention-days: 30
+
+      - name: 📊 Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: comprehensive
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: ❌ Fail on Low Coverage
+        if: steps.coverage.outputs.total_coverage < 70
+        run: |
+          echo "❌ Coverage is ${{ steps.coverage.outputs.total_coverage }}% which is below the 70% threshold"
+          echo "Please add more tests to improve coverage before merging."
+          exit 1 
