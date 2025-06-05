@@ -1,0 +1,25 @@
+{
+  "validUser": {
+    "email": "test@clausediff.com",
+    "password": "TestPassword123!",
+    "firstName": "Test",
+    "lastName": "User"
+  },
+  "adminUser": {
+    "email": "admin@clausediff.com",
+    "password": "AdminPassword123!",
+    "firstName": "Admin",
+    "lastName": "User",
+    "role": "admin"
+  },
+  "invalidUser": {
+    "email": "invalid@clausediff.com",
+    "password": "WrongPassword"
+  },
+  "newUser": {
+    "email": "newuser@clausediff.com",
+    "password": "NewPassword123!",
+    "firstName": "New",
+    "lastName": "User"
+  }
+} 
