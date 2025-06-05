@@ -30,6 +30,8 @@
 - `test/security/injection/sql-injection.security.test.ts` - SQL injection protection tests
 - `test/security/injection/xss-protection.security.test.ts` - XSS protection tests
 - `test/security/headers/security-headers.security.test.ts` - Security headers validation
+- `test/security/rate-limiting.security.test.ts` - Rate limiting tests for various endpoints
+- `test/security/enhanced-edge-cases.security.test.ts` - Enhanced security edge cases and attack vectors
 - `.github/workflows/test.yml` - GitHub Actions CI/CD workflow for automated testing
 - `package.json` - Updated dependencies for comprehensive testing
 
@@ -89,8 +91,8 @@
   - [x] 4.5 Create file upload security tests (malicious files, size limits, type validation)
   - [x] 4.6 Create security headers validation tests (CSP, HSTS, X-Frame-Options, etc.)
   - [x] 4.7 Create session management security tests (token rotation, expiration, hijacking)
-  - [ ] 4.8 Create rate limiting tests for various endpoints and attack scenarios
-  - [ ] 4.9 Enhance existing security tests with additional edge cases and attack vectors
+  - [x] 4.8 Create rate limiting tests for various endpoints and attack scenarios
+  - [x] 4.9 Enhance existing security tests with additional edge cases and attack vectors
 
 - [ ] 5.0 Set Up CI/CD Pipeline and Monitoring
   - [ ] 5.1 Create GitHub Actions workflow with parallel job execution
