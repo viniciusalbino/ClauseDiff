@@ -307,11 +307,11 @@ export default function RegisterPage() {
       <footer className="w-full max-w-6xl mx-auto py-4 px-2 sm:px-0">
         <p className="text-center text-xs text-slate-500">
           Ao criar uma conta, você concorda com nossos{" "}
-          <Link href="/terms" className="underline hover:text-blue-600">
+          <Link href="/termos-de-uso" className="underline hover:text-blue-600">
             Termos de Uso
           </Link>{" "}
           e{" "}
-          <Link href="/privacy" className="underline hover:text-blue-600">
+          <Link href="/politica-privacidade" className="underline hover:text-blue-600">
             Política de Privacidade
           </Link>
         </p>
