@@ -61,7 +61,7 @@ module.exports = {
     '^next-auth/jwt$': '<rootDir>/test/__mocks__/next-auth/jwt.ts',
     '^@/lib/auth-config$': '<rootDir>/test/__mocks__/src/lib/auth-config.ts',
   },
-  testPathIgnorePatterns: ['/node_modules/', '/.next/'],
+  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/cypress/'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

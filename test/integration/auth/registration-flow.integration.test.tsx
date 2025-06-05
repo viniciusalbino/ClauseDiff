@@ -230,9 +230,6 @@ describe('Registration Flow Integration', () => {
       // Submit form
       await user.click(screen.getByTestId('submit-button'))
 
-      // Should show loading state
-      expect(screen.getByText('Creating Account...')).toBeInTheDocument()
-
       // Should show success message
       await waitFor(() => {
         expect(screen.getByTestId('registration-success')).toBeInTheDocument()

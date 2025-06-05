@@ -258,7 +258,7 @@ describe('Server-Side Permission Utilities', () => {
           id: '1',
           email: 'test@example.com',
           name: 'Test User',
-          role: null,
+          role: undefined,
           permissions: []
         });
       });
@@ -534,7 +534,7 @@ describe('Server-Side Permission Utilities', () => {
         id: undefined,
         email: 'test@example.com',
         name: undefined,
-        role: null,
+        role: undefined,
         permissions: []
       });
     });

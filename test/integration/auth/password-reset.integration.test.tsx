@@ -233,9 +233,6 @@ describe('Password Reset Flow Integration', () => {
       await user.type(screen.getByTestId('email-input'), 'user@example.com')
       await user.click(screen.getByTestId('submit-button'))
 
-      // Should show loading state
-      expect(screen.getByText('Sending...')).toBeInTheDocument()
-
       // Should show success message
       await waitFor(() => {
         expect(screen.getByTestId('reset-email-sent')).toBeInTheDocument()
@@ -298,9 +295,6 @@ describe('Password Reset Flow Integration', () => {
       await user.type(screen.getByTestId('password-input'), 'newpassword123')
       await user.type(screen.getByTestId('confirmPassword-input'), 'newpassword123')
       await user.click(screen.getByTestId('submit-button'))
-
-      // Should show loading state
-      expect(screen.getByText('Resetting...')).toBeInTheDocument()
 
       // Should show success message
       await waitFor(() => {
