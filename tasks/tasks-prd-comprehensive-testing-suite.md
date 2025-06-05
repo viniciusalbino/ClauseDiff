@@ -74,11 +74,11 @@
   - [x] 3.5 Create integration tests for complete login/logout workflow with mocking
   - [x] 3.6 Create integration tests for user registration and email verification flow
   - [x] 3.7 Create integration tests for password reset functionality
-  - [ ] 3.8 Create integration tests for file upload to comparison workflow
+  - [x] 3.8 Create integration tests for file upload to comparison workflow
   - [x] 3.9 Create E2E tests for user registration journey across browsers
-  - [ ] 3.10 Create E2E tests for login/logout flows with error scenarios
-  - [ ] 3.11 Create E2E tests for document upload and comparison workflow
-  - [ ] 3.12 Create E2E tests for protected page navigation and permission checking
+  - [x] 3.10 Create E2E tests for login/logout flows with error scenarios
+  - [x] 3.11 Create E2E tests for document upload and comparison workflow
+  - [x] 3.12 Create E2E tests for protected page navigation and permission checking
   - [x] 3.13 Set up screenshot and video capture for test failures
 
 - [ ] 4.0 Enhance Security Testing Coverage
