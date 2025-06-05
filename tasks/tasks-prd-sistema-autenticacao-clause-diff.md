@@ -56,15 +56,15 @@
   - [x] 4.8 Adaptar UI para acessibilidade, responsividade e feedback visual
   - [x] 4.9 Testar todos os fluxos de autenticação no frontend
 
-- [ ] 5.0 Implementação de RBAC e Gerenciamento de Permissões
-  - [ ] 5.1 Definir roles (user, admin) no schema e Auth.js
-  - [ ] 5.2 Implementar permissões granulares para cada role
-  - [ ] 5.3 Implementar middleware para verificação de permissões em rotas API
-  - [ ] 5.4 Testar restrição de acesso conforme role do usuário
+- [x] 5.0 Implementação de RBAC e Gerenciamento de Permissões
+  - [x] 5.1 Definir roles (user, admin) no schema e Auth.js
+  - [x] 5.2 Implementar permissões granulares para cada role
+  - [x] 5.3 Implementar middleware para verificação de permissões em rotas API
+  - [x] 5.4 Testar restrição de acesso conforme role do usuário
 
-- [ ] 6.0 Testes de Segurança e Conformidade
-  - [ ] 6.1 Escrever testes automatizados para fluxos de autenticação (login, cadastro, recuperação de senha)
-  - [ ] 6.2 Escrever testes para cenários de ataque (brute force, CSRF, XSS, timing attacks)
-  - [ ] 6.3 Validar conformidade com LGPD/GDPR (exclusão de dados, consentimento)
-  - [ ] 6.4 Validar métricas de sucesso (tempo de login, taxa de recuperação, conversão)
-  - [ ] 6.5 Documentar resultados dos testes e ajustes necessários 
+- [x] 6.0 Testes de Segurança e Conformidade
+  - [x] 6.1 Escrever testes automatizados para fluxos de autenticação (login, cadastro, recuperação de senha)
+  - [x] 6.2 Escrever testes para cenários de ataque (brute force, CSRF, XSS, timing attacks)
+  - [x] 6.3 Validar conformidade com LGPD/GDPR (exclusão de dados, consentimento)
+  - [x] 6.4 Validar métricas de sucesso (tempo de login, taxa de recuperação, conversão)
+  - [x] 6.5 Documentar resultados dos testes e ajustes necessários 

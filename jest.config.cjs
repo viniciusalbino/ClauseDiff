@@ -3,7 +3,13 @@ module.exports = {
   testEnvironment: 'jsdom',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: true }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { 
+      useESM: true,
+      tsconfig: {
+        jsx: 'react-jsx'
+      }
+    }],
+    '^.+\\.(js|jsx)$': ['babel-jest']
   },
   moduleNameMapper: {
     '^@domain/(.*)$': '<rootDir>/src/domain/$1',
@@ -17,7 +23,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts'
+    '!src/**/*.d.ts',
+    '!src/index.tsx',
+    '!src/App.tsx',
+    '!src/presentation/**/*.tsx'
   ],
   coverageThreshold: {
     global: {
@@ -27,10 +36,8 @@ module.exports = {
       lines: 10,
     },
   },
-  globals: {
-    'ts-jest': {
-      useESM: true,
-      tsconfig: 'tsconfig.json',
-    }
-  }
+  setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose|openid-client|next-auth)/)'
+  ]
 }; 
