@@ -45,16 +45,16 @@
   - [x] 3.4 Implementar logging de eventos de segurança
   - [x] 3.5 Testar middleware em cenários de ataque simulados
 
-- [ ] 4.0 Implementação dos Hooks e Componentes de Autenticação no Frontend
+- [x] 4.0 Implementação dos Hooks e Componentes de Autenticação no Frontend
   - [x] 4.1 Implementar hook `useAuth()` com tipagem completa
   - [x] 4.2 Implementar hook `useRequireAuth()` com redirecionamento e preservação de URL
   - [x] 4.3 Implementar hook `usePermissions()` para RBAC
   - [x] 4.4 Criar componente de formulário de login com validação e feedback
   - [x] 4.5 Criar componente de cadastro com validação de campos obrigatórios e opcionais
-  - [ ] 4.6 Criar componente de recuperação de senha com envio de código por email
-  - [ ] 4.7 Criar componente de gerenciamento de perfil (edição de dados do usuário)
-  - [ ] 4.8 Adaptar UI para acessibilidade, responsividade e feedback visual
-  - [ ] 4.9 Testar todos os fluxos de autenticação no frontend
+  - [x] 4.6 Criar componente de recuperação de senha com envio de código por email
+  - [x] 4.7 Criar componente de gerenciamento de perfil (edição de dados do usuário)
+  - [x] 4.8 Adaptar UI para acessibilidade, responsividade e feedback visual
+  - [x] 4.9 Testar todos os fluxos de autenticação no frontend
 
 - [ ] 5.0 Implementação de RBAC e Gerenciamento de Permissões
   - [ ] 5.1 Definir roles (user, admin) no schema e Auth.js

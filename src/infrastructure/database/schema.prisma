@@ -9,27 +9,30 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  password       String?
-  firstName      String?
-  lastName       String?
-  city           String?
-  state          String?
-  cpf            String?         @unique
-  role           Role            @default(USER)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  name           String?
-  image          String?
-  emailVerified  DateTime?
-  accounts       Account[]
-  auditLogs      AuditLog[]
-  billingAccount BillingAccount?
-  sessions       Session[]
+  id               String          @id @default(uuid())
+  email            String          @unique
+  password         String?
+  firstName        String?
+  lastName         String?
+  city             String?
+  state            String?
+  cpf              String?         @unique
+  role             Role            @default(USER)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  name             String?
+  image            String?
+  emailVerified    DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  accounts         Account[]
+  auditLogs        AuditLog[]
+  billingAccount   BillingAccount?
+  sessions         Session[]
 
   @@index([role])
   @@index([createdAt])
+  @@index([resetToken])
 }
 
 model Account {

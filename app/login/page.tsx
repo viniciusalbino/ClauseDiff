@@ -165,12 +165,12 @@ export default function LoginPage() {
               </div>
 
               <div className="text-sm">
-                <a
-                  href="#" // Replace with actual password reset link
+                <Link
+                  href="/forgot-password"
                   className="font-medium text-blue-600 hover:text-blue-500 hover:underline"
                 >
                   Esqueceu sua senha?
-                </a>
+                </Link>
               </div>
             </div>
 

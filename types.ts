@@ -85,8 +85,13 @@ declare module "next-auth" {
       image?: string | null;
       firstName?: string | null;
       lastName?: string | null;
+      city?: string | null;
+      state?: string | null;
+      cpf?: string | null;
       emailVerified?: string | Date | null;
       role?: string | null; // Use string instead of Prisma enum to avoid import issues
+      createdAt?: string | Date | null;
+      lastLoginAt?: string | Date | null;
     } & DefaultSession["user"];
     accessToken?: string;
     // Debug information (only in development)
@@ -104,8 +109,13 @@ declare module "next-auth" {
     image?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    city?: string | null;
+    state?: string | null;
+    cpf?: string | null;
     emailVerified?: string | Date | null;
     role?: string | null; // Use string instead of Prisma enum
+    createdAt?: string | Date | null;
+    lastLoginAt?: string | Date | null;
   }
 }
 
@@ -117,6 +127,9 @@ declare module "next-auth/jwt" {
     picture?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    city?: string | null;
+    state?: string | null;
+    cpf?: string | null;
     emailVerified?: string | Date | null;
     role?: string | null; // Use string instead of Prisma enum
     accessToken?: string;

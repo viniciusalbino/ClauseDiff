@@ -236,6 +236,13 @@ function validateCSRF(request: NextRequest): boolean {
     return true;
   }
   
+  // Skip CSRF check for session-authenticated API routes
+  // These routes use NextAuth session authentication, which is sufficient
+  const sessionAuthenticatedRoutes = ['/api/user/', '/api/protected/'];
+  if (sessionAuthenticatedRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
+    return true;
+  }
+  
   const csrfToken = request.headers.get(SECURITY_CONFIG.csrf.headerName);
   const csrfCookie = request.cookies.get(SECURITY_CONFIG.csrf.cookieName)?.value;
   
