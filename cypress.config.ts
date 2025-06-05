@@ -11,7 +11,7 @@ export default defineConfig({
     screenshotOnRunFailure: true,
     videosFolder: 'cypress/videos',
     screenshotsFolder: 'cypress/screenshots',
-    setupNodeEvents(on, config) {
+    setupNodeEvents(on, _config) {
       // implement node event listeners here
       
       // Task for seeding test data
