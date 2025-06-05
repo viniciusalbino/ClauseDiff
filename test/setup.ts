@@ -1,13 +1,20 @@
 import '@testing-library/jest-dom';
+import { setupMockServer } from './__mocks__/api/mock-server';
+import { resetPrismaMocks } from './__mocks__/prisma';
+import { resetMockData } from './__mocks__/prisma/client';
+
+// Setup mock server for all tests
+setupMockServer();
 
 // Mock environment variables
 process.env.NEXTAUTH_URL = 'http://localhost:3000';
 process.env.NEXTAUTH_SECRET = 'test-secret';
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 
-// Mock fetch
-global.fetch = jest.fn(() =>
-  Promise.resolve({
+// Custom mock server will handle most HTTP requests, but keep a fallback fetch mock for unhandled requests
+global.fetch = jest.fn((url: string | URL | Request, init?: RequestInit) => {
+  console.warn(`Unmocked fetch call to: ${url}`);
+  return Promise.resolve({
     ok: true,
     status: 200,
     statusText: 'OK',
@@ -31,8 +38,8 @@ global.fetch = jest.fn(() =>
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     blob: () => Promise.resolve(new Blob()),
     formData: () => Promise.resolve(new FormData()),
-  } as unknown as Response)
-);
+  } as unknown as Response);
+});
 
 // Mock NextAuth
 jest.mock('next-auth/react', () => ({
@@ -50,6 +57,22 @@ jest.mock('next/router', () => ({
     query: {},
     asPath: '/',
   })),
+}));
+
+// Mock Next.js navigation
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+    pathname: '/',
+    query: {},
+    asPath: '/',
+  })),
+  usePathname: jest.fn(() => '/'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
 }));
 
 // Mock Next.js server components
@@ -78,7 +101,58 @@ global.crypto = {
   },
 } as any;
 
+// Suppress console warnings for tests
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+beforeAll(async () => {
+  // Setup custom Jest matchers
+  try {
+    const { setupCustomMatchers } = await import('./utils/custom-matchers');
+    setupCustomMatchers();
+  } catch (error) {
+    // Custom matchers are optional, continue if they fail to load
+    console.warn('Failed to load custom matchers:', error);
+  }
+  
+  console.warn = jest.fn();
+  console.error = jest.fn();
+});
+
+afterAll(() => {
+  console.warn = originalConsoleWarn;
+  console.error = originalConsoleError;
+});
+
 // Reset all mocks after each test
 afterEach(() => {
   jest.clearAllMocks();
-}); 
+  resetPrismaMocks();
+  resetMockData();
+  
+  // Reset NextAuth mocks if available
+  try {
+    const { resetNextAuthMocks } = require('./__mocks__/nextauth/provider');
+    resetNextAuthMocks();
+  } catch (error) {
+    // NextAuth mocks are optional
+  }
+});
+
+// Global test utilities available in all test files
+declare global {
+  namespace globalThis {
+    var testUtils: {
+      delay: (ms: number) => Promise<void>;
+      waitForUpdate: () => Promise<void>;
+      flushPromises: () => Promise<void>;
+    };
+  }
+}
+
+// Add global test utilities
+globalThis.testUtils = {
+  delay: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+  waitForUpdate: () => new Promise(resolve => setTimeout(resolve, 0)),
+  flushPromises: () => new Promise(resolve => setTimeout(resolve, 0))
+}; 

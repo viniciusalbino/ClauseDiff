@@ -307,6 +307,9 @@
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
+  .isolate {
+    isolation: isolate;
+  }
   .-z-20 {
     z-index: calc(20 * -1);
   }

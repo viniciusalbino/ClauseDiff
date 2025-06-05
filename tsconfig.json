@@ -26,9 +26,48 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      // Domain sublayer aliases (most specific first)
+      "@domain/entities/*": ["src/domain/entities/*"],
+      "@domain/repositories/*": ["src/domain/repositories/*"],
+      "@domain/services/*": ["src/domain/services/*"],
+      
+      // Application sublayer aliases
+      "@application/dto/*": ["src/application/dto/*"],
+      "@application/use-cases/*": ["src/application/use-cases/*"],
+      "@application/services/*": ["src/application/services/*"],
+      
+      // Infrastructure sublayer aliases
+      "@infrastructure/database/*": ["src/infrastructure/database/*"],
+      "@infrastructure/external-services/*": ["src/infrastructure/external-services/*"],
+      "@infrastructure/storage/*": ["src/infrastructure/storage/*"],
+      "@infrastructure/repositories/*": ["src/infrastructure/repositories/*"],
+      
+      // Presentation sublayer aliases
+      "@presentation/components/*": ["src/presentation/components/*"],
+      "@presentation/hooks/*": ["src/presentation/hooks/*"],
+      "@presentation/layouts/*": ["src/presentation/layouts/*"],
+      "@presentation/providers/*": ["src/presentation/providers/*"],
+      
+      // Domain-Driven Design layer aliases (general)
+      "@domain/*": ["src/domain/*"],
+      "@application/*": ["src/application/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@presentation/*": ["src/presentation/*"],
+      
+      // Specific source aliases
+      "@components/*": ["src/components/*"],
+      "@lib/*": ["src/lib/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@utils/*": ["src/utils/*"],
+      "@services/*": ["src/services/*"],
+      
+      // Test utilities aliases (specific first)
+      "@test-utils": ["test/utils/index"],
+      "@test-mocks/*": ["test/__mocks__/*"],
+      "@test/*": ["test/*"],
+      
+      // General source alias (most general last)
+      "@/*": ["src/*"]
     },
     "incremental": true,
     "esModuleInterop": true,
