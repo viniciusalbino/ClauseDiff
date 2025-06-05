@@ -1,34 +1,11 @@
 import { useMemo } from "react";
 import { useAuth } from "./useAuth";
 
-// Define available roles
-export const ROLES = {
-  USER: "USER",
-  ADMIN: "ADMIN",
-} as const;
+// Import roles and permissions from the server-side constants
+import { ROLES, PERMISSIONS, type Role, type Permission } from "../lib/permissions";
 
-export type Role = typeof ROLES[keyof typeof ROLES];
-
-// Define available permissions
-export const PERMISSIONS = {
-  // Document permissions
-  DOCUMENT_READ: "document:read",
-  DOCUMENT_WRITE: "document:write",
-  DOCUMENT_DELETE: "document:delete",
-  DOCUMENT_SHARE: "document:share",
-  
-  // User management permissions
-  USER_READ: "user:read",
-  USER_WRITE: "user:write",
-  USER_DELETE: "user:delete",
-  
-  // Admin permissions
-  ADMIN_PANEL: "admin:panel",
-  AUDIT_LOG_READ: "audit:read",
-  SYSTEM_CONFIG: "system:config",
-} as const;
-
-export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+// Re-export for convenience
+export { ROLES, PERMISSIONS, type Role, type Permission };
 
 // Role-based permission mappings
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {

@@ -413,7 +413,7 @@ export async function middleware(request: NextRequest) {
   const adminRoutes = ['/admin'];
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
   
-  if (isAdminRoute && token?.role !== 'admin') {
+  if (isAdminRoute && token?.role !== 'ADMIN') {
     console.warn(`Non-admin user attempted to access admin route: ${pathname}, user: ${token?.email}, IP: ${ip}`);
     
     if (pathname.startsWith('/api/')) {
@@ -434,6 +434,59 @@ export async function middleware(request: NextRequest) {
     }
     
     return NextResponse.redirect(new URL('/403', request.url));
+  }
+  
+  // API Permission-based route protection
+  const apiPermissionRoutes = [
+    { path: '/api/admin/', role: 'ADMIN' },
+    { path: '/api/user/profile', role: 'USER' }, // All authenticated users
+    { path: '/api/users/', role: 'ADMIN' }, // User management requires admin
+    { path: '/api/audit/', role: 'ADMIN' }, // Audit logs require admin
+  ];
+  
+  for (const routeConfig of apiPermissionRoutes) {
+    if (pathname.startsWith(routeConfig.path)) {
+      if (!token) {
+        logSecurityEvent(ip, 'UNAUTHORIZED_API_ACCESS', { route: pathname });
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Unauthorized',
+            message: 'Authentication required',
+            code: 'AUTH_REQUIRED'
+          }),
+          { 
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+              ...Object.fromEntries(Object.entries(SECURITY_CONFIG.securityHeaders))
+            }
+          }
+        );
+      }
+      
+      if (routeConfig.role === 'ADMIN' && token.role !== 'ADMIN') {
+        logSecurityEvent(ip, 'FORBIDDEN_API_ACCESS', { 
+          route: pathname, 
+          userRole: token.role,
+          requiredRole: routeConfig.role 
+        });
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Forbidden',
+            message: 'Insufficient permissions',
+            code: 'INSUFFICIENT_PERMISSIONS'
+          }),
+          { 
+            status: 403,
+            headers: {
+              'Content-Type': 'application/json',
+              ...Object.fromEntries(Object.entries(SECURITY_CONFIG.securityHeaders))
+            }
+          }
+        );
+      }
+      break; // Exit loop once we've processed the matching route
+    }
   }
   
   // Log security events (in production, send to monitoring service)
