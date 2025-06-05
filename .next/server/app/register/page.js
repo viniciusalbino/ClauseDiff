@@ -278,7 +278,7 @@ const __default__ = proxy.default;
 var __webpack_require__ = require("../../webpack-runtime.js");
 __webpack_require__.C(exports);
 var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/next","vendor-chunks/next-auth","vendor-chunks/@babel","vendor-chunks/@swc","vendor-chunks/zod"], () => (__webpack_exec__("(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fregister%2Fpage&page=%2Fregister%2Fpage&appPaths=%2Fregister%2Fpage&pagePath=private-next-app-dir%2Fregister%2Fpage.tsx&appDir=%2FUsers%2Fviniciusalbino%2FDocuments%2FGitHub%2Fclausediff.nosync%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fviniciusalbino%2FDocuments%2FGitHub%2Fclausediff.nosync&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!")));
+var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/next","vendor-chunks/@swc","vendor-chunks/next-auth","vendor-chunks/@babel","vendor-chunks/zod"], () => (__webpack_exec__("(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader.js?name=app%2Fregister%2Fpage&page=%2Fregister%2Fpage&appPaths=%2Fregister%2Fpage&pagePath=private-next-app-dir%2Fregister%2Fpage.tsx&appDir=%2FUsers%2Fviniciusalbino%2FDocuments%2FGitHub%2Fclausediff.nosync%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2FUsers%2Fviniciusalbino%2FDocuments%2FGitHub%2Fclausediff.nosync&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D!")));
 module.exports = __webpack_exports__;
 
 })();

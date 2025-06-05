@@ -20,6 +20,23 @@ const SECURITY_CONFIG = {
     maxRequests: 100, // limit each IP to 100 requests per windowMs
     authWindowMs: 5 * 60 * 1000, // 5 minutes for auth endpoints
     authMaxRequests: 10, // stricter for auth endpoints
+    // Specific login attempt limiting
+    loginWindowMs: 15 * 60 * 1000, // 15 minutes for login attempts
+    loginMaxAttempts: 5, // max 5 login attempts per 15 minutes
+    // Progressive backoff for repeated failures
+    progressiveBackoff: {
+      enabled: true,
+      baseDelayMs: 1000, // 1 second base delay
+      maxDelayMs: 30000, // max 30 seconds delay
+      multiplier: 2, // exponential backoff
+    }
+  },
+  
+  // Timing attack protection
+  timingAttackProtection: {
+    enabled: true,
+    minDelayMs: 100, // minimum delay for all auth operations
+    maxDelayMs: 2000, // maximum random delay
   },
   
   // Security headers
@@ -47,11 +64,138 @@ const SECURITY_CONFIG = {
 // Rate limiting store (in production, use Redis or a proper database)
 const rateStore = new Map<string, { count: number; resetTime: number }>();
 
+// Login attempt tracking (separate from general rate limiting)
+const loginAttemptStore = new Map<string, {
+  attempts: number;
+  firstAttempt: number;
+  lastAttempt: number;
+  failures: number;
+  backoffUntil?: number;
+}>();
+
+// Security event logging store
+const securityEventStore: Array<{
+  timestamp: number;
+  ip: string;
+  event: string;
+  details: Record<string, any>;
+}> = [];
+
 // CSRF token generation
 function generateCSRFToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Enhanced login attempt tracking with progressive backoff
+function checkLoginAttempts(ip: string): { allowed: boolean; backoffMs?: number } {
+  const now = Date.now();
+  const record = loginAttemptStore.get(ip);
+  const config = SECURITY_CONFIG.rateLimit;
+  
+  if (!record) {
+    // First attempt - create record
+    loginAttemptStore.set(ip, {
+      attempts: 1,
+      firstAttempt: now,
+      lastAttempt: now,
+      failures: 0
+    });
+    return { allowed: true };
+  }
+  
+  // Check if backoff period is still active
+  if (record.backoffUntil && now < record.backoffUntil) {
+    const backoffMs = record.backoffUntil - now;
+    logSecurityEvent(ip, 'LOGIN_ATTEMPT_BLOCKED', { 
+      reason: 'progressive_backoff',
+      backoffRemainingMs: backoffMs,
+      failures: record.failures
+    });
+    return { allowed: false, backoffMs };
+  }
+  
+  // Reset attempts if window has passed
+  if (now - record.firstAttempt > config.loginWindowMs) {
+    record.attempts = 1;
+    record.firstAttempt = now;
+    record.lastAttempt = now;
+    record.failures = 0;
+    delete record.backoffUntil;
+    return { allowed: true };
+  }
+  
+  // Check if within rate limit
+  if (record.attempts >= config.loginMaxAttempts) {
+    logSecurityEvent(ip, 'LOGIN_RATE_LIMIT_EXCEEDED', {
+      attempts: record.attempts,
+      windowMs: config.loginWindowMs
+    });
+    return { allowed: false };
+  }
+  
+  record.attempts++;
+  record.lastAttempt = now;
+  return { allowed: true };
+}
+
+// Record login failure and apply progressive backoff
+export function recordLoginFailure(ip: string): void {
+  const record = loginAttemptStore.get(ip);
+  if (!record) return;
+  
+  record.failures++;
+  
+  const config = SECURITY_CONFIG.rateLimit.progressiveBackoff;
+  if (config.enabled && record.failures >= 3) {
+    // Apply progressive backoff after 3 failures
+    const backoffDelay = Math.min(
+      config.baseDelayMs * Math.pow(config.multiplier, record.failures - 3),
+      config.maxDelayMs
+    );
+    
+    record.backoffUntil = Date.now() + backoffDelay;
+    
+    logSecurityEvent(ip, 'LOGIN_PROGRESSIVE_BACKOFF_APPLIED', {
+      failures: record.failures,
+      backoffMs: backoffDelay
+    });
+  }
+}
+
+// Timing attack protection - adds random delay to auth operations
+async function addTimingDelay(): Promise<void> {
+  if (!SECURITY_CONFIG.timingAttackProtection.enabled) return;
+  
+  const { minDelayMs, maxDelayMs } = SECURITY_CONFIG.timingAttackProtection;
+  const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
+  
+  await new Promise(resolve => setTimeout(resolve, delay));
+}
+
+// Security event logging
+function logSecurityEvent(ip: string, event: string, details: Record<string, any> = {}): void {
+  const logEntry = {
+    timestamp: Date.now(),
+    ip,
+    event,
+    details
+  };
+  
+  securityEventStore.push(logEntry);
+  
+  // Log to console for development (in production, send to proper logging service)
+  console.log(`[SECURITY] ${event}:`, JSON.stringify({
+    timestamp: new Date(logEntry.timestamp).toISOString(),
+    ip,
+    ...details
+  }));
+  
+  // Keep only last 1000 events in memory (in production, use proper storage)
+  if (securityEventStore.length > 1000) {
+    securityEventStore.splice(0, securityEventStore.length - 1000);
+  }
 }
 
 // Rate limiting function
@@ -119,13 +263,18 @@ export async function middleware(request: NextRequest) {
   // Apply security headers to all responses
   response = addSecurityHeaders(response);
   
-  // Rate limiting
+  // Enhanced rate limiting with special handling for login attempts
   if (SECURITY_CONFIG.rateLimit.enabled) {
     const isAuthEndpoint = pathname.startsWith('/api/auth/');
+    const isLoginEndpoint = pathname === '/api/auth/callback/credentials' || 
+                           pathname === '/api/auth/signin/credentials' ||
+                           pathname.includes('signin');
+    
+    // Check general rate limiting first
     const rateLimitPassed = checkRateLimit(ip, isAuthEndpoint);
     
     if (!rateLimitPassed) {
-      console.warn(`Rate limit exceeded for IP: ${ip}, endpoint: ${pathname}`);
+      logSecurityEvent(ip, 'GENERAL_RATE_LIMIT_EXCEEDED', { endpoint: pathname });
       return new NextResponse(
         JSON.stringify({ 
           error: 'Rate limit exceeded',
@@ -141,6 +290,35 @@ export async function middleware(request: NextRequest) {
           }
         }
       );
+    }
+    
+    // Additional login attempt checking
+    if (isLoginEndpoint) {
+      const loginCheck = checkLoginAttempts(ip);
+      
+      if (!loginCheck.allowed) {
+        const retryAfter = loginCheck.backoffMs ? Math.ceil(loginCheck.backoffMs / 1000) : 900;
+        
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'Login attempts exceeded',
+            message: 'Too many failed login attempts. Please try again later.',
+            code: 'LOGIN_RATE_LIMIT_EXCEEDED',
+            retryAfterSeconds: retryAfter
+          }),
+          { 
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': retryAfter.toString(),
+              ...Object.fromEntries(Object.entries(SECURITY_CONFIG.securityHeaders))
+            }
+          }
+        );
+      }
+      
+      // Add timing delay for login attempts
+      await addTimingDelay();
     }
   }
   
@@ -159,7 +337,12 @@ export async function middleware(request: NextRequest) {
     
     // Validate CSRF for state-changing requests
     if (!validateCSRF(request)) {
-      console.warn(`CSRF validation failed for IP: ${ip}, endpoint: ${pathname}`);
+      logSecurityEvent(ip, 'CSRF_VALIDATION_FAILED', { 
+        endpoint: pathname,
+        method: request.method,
+        userAgent: request.headers.get('user-agent') 
+      });
+      
       return new NextResponse(
         JSON.stringify({ 
           error: 'CSRF validation failed',
@@ -188,7 +371,12 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
   if (isProtectedRoute && !token) {
-    console.log(`Unauthorized access attempt to protected route: ${pathname} from IP: ${ip}`);
+    logSecurityEvent(ip, 'UNAUTHORIZED_ACCESS_ATTEMPT', {
+      route: pathname,
+      method: request.method,
+      userAgent: request.headers.get('user-agent'),
+      referer: request.headers.get('referer')
+    });
     
     // For API routes, return JSON error
     if (pathname.startsWith('/api/')) {

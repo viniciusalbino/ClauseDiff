@@ -38,12 +38,12 @@
   - [x] 2.6 Implementar proteção CSRF avançada
   - [x] 2.7 Testar fluxos de cadastro, login, logout e recuperação de senha
 
-- [ ] 3.0 Implementação dos Middlewares de Segurança
-  - [ ] 3.1 Implementar rate limiting para tentativas de login
-  - [ ] 3.2 Implementar proteção contra timing attacks
-  - [ ] 3.3 Adicionar headers de segurança (CSP, HSTS, etc.)
-  - [ ] 3.4 Implementar logging de eventos de segurança
-  - [ ] 3.5 Testar middleware em cenários de ataque simulados
+- [x] 3.0 Implementação dos Middlewares de Segurança
+  - [x] 3.1 Implementar rate limiting para tentativas de login
+  - [x] 3.2 Implementar proteção contra timing attacks
+  - [x] 3.3 Adicionar headers de segurança (CSP, HSTS, etc.)
+  - [x] 3.4 Implementar logging de eventos de segurança
+  - [x] 3.5 Testar middleware em cenários de ataque simulados
 
 - [ ] 4.0 Implementação dos Hooks e Componentes de Autenticação no Frontend
   - [x] 4.1 Implementar hook `useAuth()` com tipagem completa
