@@ -29,14 +29,14 @@
   - [x] 1.5 Planejar expansão futura para cobrança (billing)
   - [x] 1.6 Testar integridade do schema e migrations
 
-- [ ] 2.0 Implementação do Auth.js (NextAuth) com provedores e adapter Prisma
+- [x] 2.0 Implementação do Auth.js (NextAuth) com provedores e adapter Prisma
   - [x] 2.1 Configurar Auth.js com TypeScript type-safe
   - [x] 2.2 Integrar adapter Prisma com customizações para logging e auditoria
   - [x] 2.3 Implementar provedor de credenciais (email/senha) com validação Zod e hash bcrypt + salt
   - [x] 2.4 Implementar provedor Google OAuth com escopo mínimo necessário
-  - [ ] 2.5 Implementar rotação de tokens JWT com refresh strategy
-  - [ ] 2.6 Implementar proteção CSRF avançada
-  - [ ] 2.7 Testar fluxos de cadastro, login, logout e recuperação de senha
+  - [x] 2.5 Implementar rotação de tokens JWT com refresh strategy
+  - [x] 2.6 Implementar proteção CSRF avançada
+  - [x] 2.7 Testar fluxos de cadastro, login, logout e recuperação de senha
 
 - [ ] 3.0 Implementação dos Middlewares de Segurança
   - [ ] 3.1 Implementar rate limiting para tentativas de login
@@ -46,11 +46,11 @@
   - [ ] 3.5 Testar middleware em cenários de ataque simulados
 
 - [ ] 4.0 Implementação dos Hooks e Componentes de Autenticação no Frontend
-  - [ ] 4.1 Implementar hook `useAuth()` com tipagem completa
-  - [ ] 4.2 Implementar hook `useRequireAuth()` com redirecionamento e preservação de URL
-  - [ ] 4.3 Implementar hook `usePermissions()` para RBAC
-  - [ ] 4.4 Criar componente de formulário de login com validação e feedback
-  - [ ] 4.5 Criar componente de cadastro com validação de campos obrigatórios e opcionais
+  - [x] 4.1 Implementar hook `useAuth()` com tipagem completa
+  - [x] 4.2 Implementar hook `useRequireAuth()` com redirecionamento e preservação de URL
+  - [x] 4.3 Implementar hook `usePermissions()` para RBAC
+  - [x] 4.4 Criar componente de formulário de login com validação e feedback
+  - [x] 4.5 Criar componente de cadastro com validação de campos obrigatórios e opcionais
   - [ ] 4.6 Criar componente de recuperação de senha com envio de código por email
   - [ ] 4.7 Criar componente de gerenciamento de perfil (edição de dados do usuário)
   - [ ] 4.8 Adaptar UI para acessibilidade, responsividade e feedback visual

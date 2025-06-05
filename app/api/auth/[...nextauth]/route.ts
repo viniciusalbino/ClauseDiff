@@ -17,15 +17,13 @@
  */
 
 import NextAuth from "next-auth";
-import type { AuthOptions, User as NextAuthUser, Account as NextAuthAccount, Profile as NextAuthProfile, Session as NextAuthSession } from "next-auth";
-import { JWT as NextAuthJWT } from "next-auth/jwt";
+import type { AuthOptions, Profile as NextAuthProfile } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma"; // Use singleton Prisma instance
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import type { AdapterUser } from "next-auth/adapters";
 
 // Interface for the RAW profile data from Google, used in signIn callback and GoogleProvider.profile
 interface RawGoogleProfile extends NextAuthProfile { 
@@ -55,7 +53,7 @@ const JWT_REFRESH_THRESHOLD = 5 * 60; // 5 minutes - refresh when 5 minutes left
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days - long-lived session
 const SESSION_UPDATE_AGE = 24 * 60 * 60; // 24 hours - update session daily
 
-export const authOptions: AuthOptions = {
+const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -132,6 +130,37 @@ export const authOptions: AuthOptions = {
     signIn: "/login",
     error: "/login", 
   },
+  // Enhanced CSRF protection configuration
+  useSecureCookies: process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Host-" : ""}next-auth.csrf-token`,
+      options: {
+        httpOnly: false, // Must be accessible to client for CSRF protection
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   callbacks: {
     // Use the standard NextAuth callback signature
     async signIn({ user, account, profile }) {
@@ -172,7 +201,7 @@ export const authOptions: AuthOptions = {
       }
       return true; // Allow sign in
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       const now = Math.floor(Date.now() / 1000);
       
       // If it's a new user or new sign-in, 'user' object will be available.
@@ -270,9 +299,9 @@ export const authOptions: AuthOptions = {
         // Add JWT metadata for debugging in development
         if (process.env.NODE_ENV === "development") {
           session.debug = {
-            tokenIat: token.iat,
-            tokenExp: token.exp,
-            timeUntilExpiry: (token.exp as number) - Math.floor(Date.now() / 1000),
+            tokenIat: token.iat as number | undefined,
+            tokenExp: token.exp as number | undefined,
+            timeUntilExpiry: token.exp ? (token.exp as number) - Math.floor(Date.now() / 1000) : undefined,
           };
         }
       }

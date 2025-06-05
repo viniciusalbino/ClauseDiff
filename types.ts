@@ -91,9 +91,9 @@ declare module "next-auth" {
     accessToken?: string;
     // Debug information (only in development)
     debug?: {
-      tokenIat?: number;
-      tokenExp?: number;
-      timeUntilExpiry?: number;
+      tokenIat?: number | undefined;
+      tokenExp?: number | undefined;
+      timeUntilExpiry?: number | undefined;
     };
   }
 
