@@ -57,6 +57,9 @@ module.exports = {
     
     // Mock libraries
     '^jose$': '<rootDir>/test/__mocks__/jose.ts',
+    '^next-auth/next$': '<rootDir>/test/__mocks__/next-auth/next.ts',
+    '^next-auth/jwt$': '<rootDir>/test/__mocks__/next-auth/jwt.ts',
+    '^@/lib/auth-config$': '<rootDir>/test/__mocks__/src/lib/auth-config.ts',
   },
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
   collectCoverage: true,
