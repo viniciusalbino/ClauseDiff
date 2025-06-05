@@ -10,6 +10,7 @@
  * - Reflected XSS protection
  */
 
+import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { server } from '@test-mocks/api/mock-server';
@@ -578,4 +579,4 @@ describe('🛡️ Task 4.2: XSS Protection Tests', () => {
       }
     });
   });
-}); 
+});
