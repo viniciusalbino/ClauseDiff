@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
@@ -37,7 +37,19 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterForm, string>>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // Redirect authenticated users to compare page
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      setRedirecting(true);
+      setTimeout(() => {
+        router.push("/compare");
+      }, 1500); // Small delay to show the message
+    }
+  }, [session, status, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,7 +101,7 @@ export default function RegisterPage() {
         setGeneralError("Conta criada com sucesso, mas houve erro no login automático. Tente fazer login manualmente.");
         setIsLoading(false);
       } else if (loginResult?.ok) {
-        router.push("/success");
+        router.push("/compare");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -112,12 +124,30 @@ export default function RegisterPage() {
     setIsLoading(true);
     setGeneralError(null);
     try {
-      await signIn("google");
+      await signIn("google", { callbackUrl: "/compare" });
     } catch (err) {
       setGeneralError("Falha ao iniciar o login com Google.");
       setIsLoading(false);
     }
   };
+
+  // Show redirecting message if user is already authenticated
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-lg text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-slate-900">Você já está logado!</h2>
+          <p className="text-slate-600">
+            Redirecionando você para o painel de comparação de documentos...
+          </p>
+          <div className="text-sm text-slate-500">
+            Aguarde um momento
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-between p-4">

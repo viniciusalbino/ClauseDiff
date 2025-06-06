@@ -188,16 +188,27 @@ export class TxtProcessor implements IFileProcessor {
 
       const endTime = Date.now();
 
-      return {
+      // Retorno compatível com ProcessingResult e testes
+      const result: any = {
+        success: true,
+        extractedText: content.trim(),
         status: 'completed',
         content: content.trim(),
-        metadata,
+        metadata: {
+          ...metadata,
+          wordCount: contentAnalysis.wordCount,
+          totalPages: contentAnalysis.estimatedPages,
+          processingTime: endTime - startTime,
+          processorUsed: 'TxtProcessor'
+        },
         startTime,
         endTime,
         duration: endTime - startTime,
         pagesProcessed: contentAnalysis.estimatedPages,
         warnings: warnings.length > 0 ? warnings : undefined
       };
+
+      return result;
 
     } catch (error) {
       const endTime = Date.now();

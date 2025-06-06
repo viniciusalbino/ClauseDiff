@@ -13,8 +13,8 @@ export default function HomePage() {
     if (status === "loading") return; // Still loading
 
     if (session) {
-      // User is authenticated, redirect to dashboard
-      router.push("/dashboard");
+      // User is authenticated, redirect to compare page
+      router.push("/compare");
     } else {
       // User is not authenticated, redirect to login
       router.push("/login");

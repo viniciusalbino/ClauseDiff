@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation"; // Or "next/router" if using Pages Router
 import Link from "next/link"; // Import Link for navigation
 // import { ShimmerButton } from "@/components/ui/shimmer-button"; // Temporarily comment out ShimmerButton
@@ -21,7 +21,19 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // Redirect authenticated users to compare page
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      setRedirecting(true);
+      setTimeout(() => {
+        router.push("/compare");
+      }, 1500); // Small delay to show the message
+    }
+  }, [session, status, router]);
 
   const handleCredentialsLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -44,7 +56,7 @@ export default function LoginPage() {
         }
         setIsLoading(false);
       } else if (result?.ok) {
-        router.push("/success");
+        router.push("/compare");
       } else {
         setError("Ocorreu um erro desconhecido. Tente novamente.");
         setIsLoading(false);
@@ -59,15 +71,31 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn("google");
-      // On successful sign-in, NextAuth will handle redirection.
-      // If it stays on this page, it means there might have been an issue
-      // or the callback URL needs verification.
+      await signIn("google", { callbackUrl: "/compare" });
+      // NextAuth will redirect to /compare after successful Google sign-in
     } catch (err) {
       setError("Falha ao iniciar o login com Google.");
       setIsLoading(false);
     }
   };
+
+  // Show redirecting message if user is already authenticated
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-lg text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-slate-900">Você já está logado!</h2>
+          <p className="text-slate-600">
+            Redirecionando você para o painel de comparação de documentos...
+          </p>
+          <div className="text-sm text-slate-500">
+            Aguarde um momento
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-between p-4">

@@ -19,6 +19,8 @@ import {
   FileMetadata
 } from '../../domain/interfaces/IFileProcessor';
 
+import * as mammoth from 'mammoth';
+
 /**
  * Interface para mammoth.js
  */
@@ -59,15 +61,8 @@ export class DocxProcessor implements IFileProcessor {
    */
   private async initializeMammoth(): Promise<void> {
     try {
-      // Verifica se mammoth está disponível globalmente (browser)
-      if (typeof window !== 'undefined' && (window as any).mammoth) {
-        this.mammoth = (window as any).mammoth;
-        return;
-      }
-
-             // Para ambientes Node.js, mammoth deve ser fornecido externamente
-       // ou através de uma dependency injection na inicialização
-       console.warn('Mammoth.js not available globally, DOCX processing will not work');
+      // Use the imported mammoth directly
+      this.mammoth = mammoth as any;
     } catch (error) {
       console.error('Failed to initialize mammoth:', error);
     }
