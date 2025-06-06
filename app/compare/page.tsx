@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import DiffViewer from '../../src/presentation/components/diff/DiffViewer';
+import { motion } from 'framer-motion';
 import { DiffMatchPatchEngine } from '../../src/infrastructure/diff-engines/DiffMatchPatchEngine';
 import { MyersDiffEngine } from '../../src/infrastructure/diff-engines/MyersDiffEngine';
 import { SemanticDiffEngine } from '../../src/infrastructure/diff-engines/SemanticDiffEngine';
-// import { DiffEngineFactory } from '../../src/infrastructure/factories/DiffEngineFactory';
 import { IDiffEngine } from '../../src/domain/interfaces/IDiffEngine';
 import { DiffResult } from '../../src/domain/entities/DiffResult';
+import FileUpload from '../../src/presentation/components/diff/FileUpload';
+import { ModernButton } from '../../src/components/ui/modern-button';
+import { ModernCard } from '../../src/components/ui/modern-card';
 
 interface ComparePageProps {
   searchParams?: {
@@ -18,25 +20,17 @@ interface ComparePageProps {
 }
 
 type EngineType = 'diff-match-patch' | 'myers' | 'semantic' | 'auto';
-type ViewMode = 'side-by-side' | 'inline' | 'unified';
-type ThemeMode = 'light' | 'dark' | 'auto';
 
 export default function ComparePage({ searchParams }: ComparePageProps) {
   // State management
-  const [selectedEngine, setSelectedEngine] = useState<EngineType>(
+  const [selectedEngine] = useState<EngineType>(
     (searchParams?.engine as EngineType) || 'auto'
-  );
-  const [viewMode, setViewMode] = useState<ViewMode>(
-    (searchParams?.mode as ViewMode) || 'side-by-side'
-  );
-  const [theme, setTheme] = useState<ThemeMode>(
-    (searchParams?.theme as ThemeMode) || 'light'
   );
   const [diffEngine, setDiffEngine] = useState<IDiffEngine | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
+  const [showMetrics, setShowMetrics] = useState(false);
 
   // Initialize diff engine (client-side only)
   useEffect(() => {
@@ -46,37 +40,28 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
     const initializeEngine = async () => {
       setIsLoading(true);
       setError(null);
-      console.log('Initializing engine:', selectedEngine);
 
       try {
         let engine: IDiffEngine;
 
-        // Create engines directly since the factory needs registration first
         switch (selectedEngine) {
           case 'diff-match-patch':
-            console.log('Creating DiffMatchPatchEngine...');
             engine = new DiffMatchPatchEngine();
             break;
           case 'myers':
-            console.log('Creating MyersDiffEngine...');
             engine = new MyersDiffEngine();
             break;
           case 'semantic':
-            console.log('Creating SemanticDiffEngine...');
             engine = new SemanticDiffEngine();
             break;
           case 'auto':
           default:
-            console.log('Creating default DiffMatchPatchEngine...');
             engine = new DiffMatchPatchEngine(); // Default fallback
             break;
         }
 
-        console.log('Engine created successfully:', engine.name);
         setDiffEngine(engine);
-        setShowWelcome(false); // Hide welcome screen once engine is ready
       } catch (err) {
-        console.error('Engine initialization failed:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to initialize diff engine';
         setError(errorMessage);
       } finally {
@@ -89,603 +74,355 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
     return () => clearTimeout(timer);
   }, [selectedEngine]);
 
-  // Handle theme changes
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // Auto theme - detect system preference
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const updateTheme = () => {
-        if (mediaQuery.matches) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-      };
+  // Handle file upload and comparison
+  const handleFilesSelected = useCallback(async (files: any[]) => {
+    if (files.length !== 2 || !diffEngine) return;
 
-      updateTheme();
-      mediaQuery.addEventListener('change', updateTheme);
-      return () => mediaQuery.removeEventListener('change', updateTheme);
+    const [file1, file2] = files;
+    if (!file1.content || !file2.content) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await diffEngine.compare({
+        originalText: file1.content,
+        modifiedText: file2.content
+      });
+
+      setDiffResult(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to compare documents';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [theme]);
+  }, [diffEngine]);
 
-  // Handle fullscreen
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+  // Render diff content with simplified view
+  const renderDiffContent = () => {
+    if (!diffResult) return null;
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+    return (
+      <div className="diff-content">
+                 <div className="diff-header">
+           <motion.h2 
+             className="diff-title"
+             initial={{ opacity: 0, x: -20 }}
+             animate={{ opacity: 1, x: 0 }}
+             transition={{ duration: 0.5 }}
+           >
+             Comparação de Documentos
+           </motion.h2>
+           <ModernButton
+             variant="outline"
+             size="md"
+             icon={showMetrics ? '👁️' : '📊'}
+             onClick={() => setShowMetrics(!showMetrics)}
+           >
+             {showMetrics ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+           </ModernButton>
+         </div>
 
-  // Event handlers
-  const handleEngineChange = useCallback((engine: EngineType) => {
-    setSelectedEngine(engine);
-    setShowWelcome(false);
-  }, []);
+                 {showMetrics && (
+           <motion.div 
+             className="metrics-panel"
+             initial={{ opacity: 0, height: 0 }}
+             animate={{ opacity: 1, height: 'auto' }}
+             exit={{ opacity: 0, height: 0 }}
+             transition={{ duration: 0.3 }}
+           >
+             <ModernCard variant="glass" padding="md" className="metric-card">
+               <span className="metric-label">Inserções</span>
+               <motion.span 
+                 className="metric-value green"
+                 initial={{ scale: 0 }}
+                 animate={{ scale: 1 }}
+                 transition={{ delay: 0.1, type: 'spring' }}
+               >
+                 {diffResult.statistics.additions}
+               </motion.span>
+             </ModernCard>
+             <ModernCard variant="glass" padding="md" className="metric-card">
+               <span className="metric-label">Deletions</span>
+               <motion.span 
+                 className="metric-value red"
+                 initial={{ scale: 0 }}
+                 animate={{ scale: 1 }}
+                 transition={{ delay: 0.2, type: 'spring' }}
+               >
+                 {diffResult.statistics.deletions}
+               </motion.span>
+             </ModernCard>
+             <ModernCard variant="glass" padding="md" className="metric-card">
+               <span className="metric-label">Modificações</span>
+               <motion.span 
+                 className="metric-value blue"
+                 initial={{ scale: 0 }}
+                 animate={{ scale: 1 }}
+                 transition={{ delay: 0.3, type: 'spring' }}
+               >
+                 {diffResult.statistics.modifications}
+               </motion.span>
+             </ModernCard>
+           </motion.div>
+         )}
 
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode);
-  }, []);
-
-  const handleThemeChange = useCallback((newTheme: ThemeMode) => {
-    setTheme(newTheme);
-  }, []);
-
-  const handleDiffComplete = useCallback((result: DiffResult) => {
-    setShowWelcome(false);
-    console.log('Diff completed:', result);
-  }, []);
-
-  const handleError = useCallback((errorMessage: string) => {
-    setError(errorMessage);
-  }, []);
-
-  const handleExport = useCallback((format: 'html' | 'pdf' | 'json', data: any) => {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `diff-export-${timestamp}.${format}`;
-
-    switch (format) {
-      case 'json':
-        const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        downloadBlob(jsonBlob, filename);
-        break;
-      case 'html':
-        const htmlContent = generateHtmlExport(data);
-        const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
-        downloadBlob(htmlBlob, filename);
-        break;
-      case 'pdf':
-        // In a real implementation, you'd use a library like jsPDF
-        alert('PDF export will be implemented with jsPDF library');
-        break;
-    }
-  }, []);
-
-  // Helper function to download blob
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Generate HTML export
-  const generateHtmlExport = (data: any) => {
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diff Export - ClauseDiff</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 20px; }
-        .header { border-bottom: 1px solid #e1e4e8; padding-bottom: 16px; margin-bottom: 24px; }
-        .metadata { color: #656d76; font-size: 14px; margin-bottom: 16px; }
-        .diff-content { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; line-height: 1.5; }
-        .addition { background-color: #d4ffe0; color: #1a7f37; }
-        .deletion { background-color: #ffe0e0; color: #cf222e; }
-        .modification { background-color: #fff8dc; color: #9a6700; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Document Comparison Report</h1>
-        <div class="metadata">
-            <p>Generated: ${data.metadata?.exportedAt || new Date().toISOString()}</p>
-            <p>Algorithm: ${data.diffResult?.algorithm || 'Unknown'}</p>
-            <p>View Mode: ${data.viewMode || 'Unknown'}</p>
-        </div>
-    </div>
-    <div class="diff-content">
-        <!-- Diff content would be rendered here -->
-        <p>Diff results exported successfully</p>
-    </div>
-</body>
-</html>`;
-  };
-
-  // Render welcome screen
-  const renderWelcome = () => (
-    <div className="welcome-screen">
-      <div className="welcome-content">
-        <div className="welcome-hero">
-          <h1>Document Comparison Tool</h1>
-          <p>
-            Compare documents with advanced algorithms and beautiful visualizations.
-            Perfect for legal documents, contracts, and technical documentation.
-          </p>
-        </div>
-
-        <div className="welcome-features">
-          <div className="feature-grid">
-            <div className="feature-item">
-              <div className="feature-icon">🔍</div>
-              <h3>Advanced Algorithms</h3>
-              <p>Choose from multiple diff algorithms optimized for different content types</p>
+        <div className="diff-view">
+          {diffResult.chunks.map((chunk, index) => (
+            <div 
+              key={index} 
+              className={`diff-line ${chunk.operation}`}
+            >
+              <span className="line-indicator">
+                {chunk.operation === 'insert' && '+'}
+                {chunk.operation === 'delete' && '-'}
+                {chunk.operation === 'equal' && ' '}
+              </span>
+              <span className="line-content">{chunk.text}</span>
             </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">📊</div>
-              <h3>Rich Visualizations</h3>
-              <p>Side-by-side, inline, and unified views with syntax highlighting</p>
-            </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">⚡</div>
-              <h3>High Performance</h3>
-              <p>Optimized for large documents with intelligent caching and chunking</p>
-            </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">🎨</div>
-              <h3>Beautiful UI</h3>
-              <p>Modern, responsive design with light and dark themes</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="welcome-actions">
-          <div className="engine-selector">
-            <h3>Choose Algorithm</h3>
-            <div className="engine-options">
-              <button
-                className={`engine-btn ${selectedEngine === 'auto' ? 'active' : ''}`}
-                onClick={() => handleEngineChange('auto')}
-              >
-                🤖 Auto Select
-              </button>
-              <button
-                className={`engine-btn ${selectedEngine === 'diff-match-patch' ? 'active' : ''}`}
-                onClick={() => handleEngineChange('diff-match-patch')}
-              >
-                ⚡ Fast (DMP)
-              </button>
-              <button
-                className={`engine-btn ${selectedEngine === 'myers' ? 'active' : ''}`}
-                onClick={() => handleEngineChange('myers')}
-              >
-                🎯 Precise (Myers)
-              </button>
-              <button
-                className={`engine-btn ${selectedEngine === 'semantic' ? 'active' : ''}`}
-                onClick={() => handleEngineChange('semantic')}
-              >
-                🧠 Smart (Semantic)
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  // Render error state
-  const renderError = () => (
-    <div className="error-state">
-      <div className="error-content">
-        <div className="error-icon">⚠️</div>
-        <h2>Something went wrong</h2>
-        <p>{error}</p>
-        <button 
-          className="retry-btn"
-          onClick={() => {
-            setError(null);
-            setSelectedEngine('auto');
-          }}
-        >
-          Try Again
-        </button>
-      </div>
-    </div>
-  );
-
-  // Render loading state
-  const renderLoading = () => (
-    <div className="loading-state">
-      <div className="loading-spinner"></div>
-      <p>Initializing diff engine...</p>
-    </div>
-  );
-
-  // Main render
   return (
-    <div className={`compare-page ${theme} ${isFullscreen ? 'fullscreen' : ''}`}>
-      <header className="page-header">
-        <div className="header-content">
-          <div className="header-left">
-            <h1 className="page-title">
-              <span className="title-icon">🔍</span>
-              ClauseDiff
-            </h1>
-            <span className="page-subtitle">Document Comparison Tool</span>
-          </div>
-          
-          <div className="header-right">
-            <div className="theme-toggle">
-              <button
-                className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('light')}
-                title="Light theme"
-              >
-                ☀️
-              </button>
-              <button
-                className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('dark')}
-                title="Dark theme"
-              >
-                🌙
-              </button>
-              <button
-                className={`theme-btn ${theme === 'auto' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('auto')}
-                title="Auto theme"
-              >
-                🔄
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="compare-page">
+             {/* Modern Header */}
+       <header className="page-header">
+         <div className="header-content">
+           <motion.h1 
+             className="page-title"
+             initial={{ opacity: 0, x: -50 }}
+             animate={{ opacity: 1, x: 0 }}
+             transition={{ duration: 0.8, type: 'spring' }}
+           >
+             <motion.span 
+               className="title-icon"
+               animate={{ rotate: [0, 5, -5, 0] }}
+               transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+             >
+               ⚖️
+             </motion.span>
+             ClauseDiff
+           </motion.h1>
+           <motion.span 
+             className="page-subtitle"
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.3, duration: 0.6 }}
+           >
+             Comparação Jurídica de Documentos
+           </motion.span>
+         </div>
+       </header>
 
+      {/* Main Content */}
       <main className="page-main">
-        <div style={{ padding: '10px', background: '#f0f0f0', margin: '10px', fontSize: '12px' }}>
-          <strong>Debug State:</strong> Loading: {isLoading.toString()}, Error: {error || 'None'}, Engine: {diffEngine?.name || 'None'}, ShowWelcome: {(!diffEngine).toString()}
-        </div>
-        
-        {isLoading && renderLoading()}
-        {error && renderError()}
-        
-        {!isLoading && !error && !diffEngine && renderWelcome()}
-        
-        {!isLoading && !error && diffEngine && (
-          <div style={{ padding: '20px' }}>
-            <h2>Debug Info:</h2>
-            <p>Engine: {diffEngine?.name || 'Unknown'}</p>
-            <p>Loading: {isLoading.toString()}</p>
-            <p>Error: {error || 'None'}</p>
-            <p>Theme: {theme}</p>
-            
-            <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
-              <h3>DiffViewer Component:</h3>
-              <DiffViewer
-                diffEngine={diffEngine}
-                initialViewMode={viewMode}
-                showControls={true}
-                showStats={true}
-                showNavigation={true}
-                showFileUpload={true}
-                layout="horizontal"
-                compactMode={false}
-                fullHeight={false}
-                theme={theme === 'auto' ? 'light' : theme}
-                onViewModeChange={handleViewModeChange}
-                onDiffComplete={handleDiffComplete}
-                onError={(err) => {
-                  console.error('DiffViewer Error:', err);
-                  handleError(err);
-                }}
-                onExport={handleExport}
-                className="main-diff-viewer"
-              />
-            </div>
-          </div>
-        )}
+                 {!diffResult && (
+           <div className="upload-section">
+             <ModernCard variant="glass" padding="xl" className="upload-card" gradient>
+               <motion.div
+                 initial={{ opacity: 0, y: 30 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.6 }}
+               >
+                 <h2 className="upload-title">Comparar Documentos</h2>
+                 <motion.p 
+                   className="upload-description"
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   transition={{ delay: 0.2, duration: 0.6 }}
+                 >
+                   Arraste e solte dois documentos para comparar suas diferenças
+                 </motion.p>
+                 
+                 {diffEngine && (
+                   <motion.div
+                     initial={{ opacity: 0, scale: 0.9 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ delay: 0.4, duration: 0.4 }}
+                   >
+                     <FileUpload
+                       onFilesSelected={handleFilesSelected}
+                       maxFiles={2}
+                       allowedTypes={[
+                         'text/plain',
+                         'text/markdown', 
+                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                       ]}
+                       dragText="Arraste 2 documentos aqui"
+                       browseText="ou clique para selecionar"
+                     />
+                   </motion.div>
+                 )}
+
+                 {isLoading && (
+                   <motion.div 
+                     className="loading-state"
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     transition={{ duration: 0.3 }}
+                   >
+                     <motion.div 
+                       className="spinner"
+                       animate={{ rotate: 360 }}
+                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                     />
+                     <p>Processando documentos...</p>
+                   </motion.div>
+                 )}
+
+                 {error && (
+                   <motion.div 
+                     className="error-state"
+                     initial={{ opacity: 0, scale: 0.9 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     transition={{ duration: 0.3 }}
+                   >
+                     <p className="error-message">{error}</p>
+                     <ModernButton
+                       variant="secondary"
+                       onClick={() => setError(null)}
+                       icon="🔄"
+                     >
+                       Tentar Novamente
+                     </ModernButton>
+                   </motion.div>
+                 )}
+               </motion.div>
+             </ModernCard>
+           </div>
+         )}
+
+                 {diffResult && (
+           <motion.div
+             initial={{ opacity: 0, y: 30 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.5 }}
+           >
+             {renderDiffContent()}
+             
+             {/* Botão para nova comparação */}
+             <motion.div 
+               className="new-comparison-section"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ delay: 0.5, duration: 0.5 }}
+             >
+               <ModernButton
+                 variant="outline"
+                 size="lg"
+                 icon="🔄"
+                 onClick={() => {
+                   setDiffResult(null);
+                   setError(null);
+                 }}
+               >
+                 Nova Comparação
+               </ModernButton>
+             </motion.div>
+           </motion.div>
+         )}
       </main>
 
       <style jsx>{`
         .compare-page {
           min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          background-color: #ffffff;
-          color: #24292f;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        .compare-page.dark {
-          background-color: #0d1117;
-          color: #f0f6fc;
-        }
-
-        .compare-page.fullscreen {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          z-index: 9999;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         .page-header {
-          background-color: #f6f8fa;
-          border-bottom: 1px solid #e1e4e8;
-          padding: 16px 24px;
-          flex-shrink: 0;
-        }
-
-        .compare-page.dark .page-header {
-          background-color: #161b22;
-          border-bottom-color: #30363d;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          padding: 1.5rem 2rem;
         }
 
         .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
           max-width: 1200px;
           margin: 0 auto;
-        }
-
-        .header-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 1rem;
         }
 
         .page-title {
-          margin: 0;
-          font-size: 24px;
+          font-size: 2rem;
           font-weight: 700;
-          color: #24292f;
+          color: white;
+          margin: 0;
           display: flex;
           align-items: center;
-          gap: 8px;
-        }
-
-        .compare-page.dark .page-title {
-          color: #f0f6fc;
+          gap: 0.5rem;
         }
 
         .title-icon {
-          font-size: 28px;
+          font-size: 2.5rem;
         }
 
         .page-subtitle {
-          color: #656d76;
-          font-size: 14px;
-        }
-
-        .compare-page.dark .page-subtitle {
-          color: #8b949e;
-        }
-
-        .theme-toggle {
-          display: flex;
-          gap: 4px;
-          background-color: #ffffff;
-          border: 1px solid #d0d7de;
-          border-radius: 6px;
-          padding: 4px;
-        }
-
-        .compare-page.dark .theme-toggle {
-          background-color: #21262d;
-          border-color: #30363d;
-        }
-
-        .theme-btn {
-          background: none;
-          border: none;
-          padding: 6px 10px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 16px;
-          transition: background-color 0.15s ease;
-        }
-
-        .theme-btn:hover {
-          background-color: #f3f4f6;
-        }
-
-        .theme-btn.active {
-          background-color: #0969da;
-        }
-
-        .compare-page.dark .theme-btn:hover {
-          background-color: #30363d;
-        }
-
-        .compare-page.dark .theme-btn.active {
-          background-color: #58a6ff;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 1rem;
+          margin-left: 0.5rem;
         }
 
         .page-main {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
         }
 
-        .welcome-screen {
-          flex: 1;
+        .upload-section {
           display: flex;
-          align-items: center;
           justify-content: center;
-          padding: 32px;
-          text-align: center;
+          align-items: center;
+          min-height: 60vh;
         }
 
-        .welcome-content {
-          max-width: 800px;
+        .upload-card {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 3rem;
+          text-align: center;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          max-width: 500px;
           width: 100%;
         }
 
-        .welcome-hero h1 {
-          font-size: 48px;
-          font-weight: 700;
-          margin: 0 0 16px 0;
-          background: linear-gradient(135deg, #0969da, #7c3aed);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+        .upload-title {
+          font-size: 2rem;
+          font-weight: 600;
+          color: #1a202c;
+          margin-bottom: 1rem;
         }
 
-        .welcome-hero p {
-          font-size: 18px;
-          color: #656d76;
-          margin-bottom: 48px;
+        .upload-description {
+          color: #4a5568;
+          font-size: 1.1rem;
+          margin-bottom: 2rem;
           line-height: 1.6;
         }
 
-        .compare-page.dark .welcome-hero p {
-          color: #8b949e;
-        }
-
-        .feature-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 24px;
-          margin-bottom: 48px;
-        }
-
-        .feature-item {
-          padding: 24px;
-          background-color: #f6f8fa;
-          border: 1px solid #e1e4e8;
-          border-radius: 8px;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .feature-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .compare-page.dark .feature-item {
-          background-color: #161b22;
-          border-color: #30363d;
-        }
-
-        .feature-icon {
-          font-size: 32px;
-          margin-bottom: 12px;
-        }
-
-        .feature-item h3 {
-          margin: 0 0 8px 0;
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .feature-item p {
-          margin: 0;
-          font-size: 14px;
-          color: #656d76;
-          line-height: 1.5;
-        }
-
-        .compare-page.dark .feature-item p {
-          color: #8b949e;
-        }
-
-        .engine-selector h3 {
-          margin: 0 0 16px 0;
-          font-size: 18px;
-          font-weight: 600;
-        }
-
-        .engine-options {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-
-        .engine-btn {
-          background-color: #ffffff;
-          border: 2px solid #d0d7de;
-          border-radius: 8px;
-          padding: 12px 20px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.15s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .engine-btn:hover {
-          border-color: #0969da;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .engine-btn.active {
-          background-color: #0969da;
-          border-color: #0969da;
-          color: white;
-        }
-
-        .compare-page.dark .engine-btn {
-          background-color: #21262d;
-          border-color: #30363d;
-          color: #f0f6fc;
-        }
-
-        .compare-page.dark .engine-btn:hover {
-          border-color: #58a6ff;
-        }
-
-        .compare-page.dark .engine-btn.active {
-          background-color: #58a6ff;
-          border-color: #58a6ff;
-          color: #0d1117;
-        }
-
-        .loading-state,
-        .error-state {
-          flex: 1;
+        .loading-state {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 32px;
+          gap: 1rem;
+          padding: 2rem;
         }
 
-        .loading-spinner {
-          width: 32px;
-          height: 32px;
-          border: 3px solid #e1e4e8;
-          border-top: 3px solid #0969da;
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e2e8f0;
+          border-top: 3px solid #667eea;
           border-radius: 50%;
           animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-
-        .compare-page.dark .loading-spinner {
-          border-color: #30363d;
-          border-top-color: #58a6ff;
         }
 
         @keyframes spin {
@@ -693,95 +430,232 @@ export default function ComparePage({ searchParams }: ComparePageProps) {
           100% { transform: rotate(360deg); }
         }
 
-        .error-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
+        .error-state {
+          background: rgba(254, 202, 202, 0.9);
+          border: 1px solid #fc8181;
+          border-radius: 12px;
+          padding: 1.5rem;
+          margin-top: 1rem;
         }
 
-        .error-content h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          color: #cf222e;
+        .error-message {
+          color: #c53030;
+          margin-bottom: 1rem;
         }
 
-        .compare-page.dark .error-content h2 {
-          color: #f85149;
-        }
-
-        .retry-btn {
-          background-color: #0969da;
+        .retry-button {
+          background: #e53e3e;
           color: white;
           border: none;
-          border-radius: 6px;
-          padding: 8px 16px;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
           cursor: pointer;
-          font-size: 14px;
-          margin-top: 16px;
-          transition: background-color 0.15s ease;
+          font-weight: 500;
+          transition: background 0.2s;
         }
 
-        .retry-btn:hover {
-          background-color: #0860ca;
+        .retry-button:hover {
+          background: #c53030;
         }
 
-        .compare-page.dark .retry-btn {
-          background-color: #58a6ff;
-          color: #0d1117;
+        .diff-content {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 2rem;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .compare-page.dark .retry-btn:hover {
-          background-color: #4493f8;
+        .diff-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid #e2e8f0;
         }
 
-        .main-diff-viewer {
-          flex: 1;
-          height: 100%;
+        .diff-title {
+          font-size: 1.8rem;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0;
         }
 
-        @media (max-width: 768px) {
-          .header-content {
-            flex-direction: column;
-            gap: 16px;
-            text-align: center;
-          }
-
-          .welcome-hero h1 {
-            font-size: 36px;
-          }
-
-          .feature-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-
-          .engine-options {
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .engine-btn {
-            width: 200px;
-            justify-content: center;
-          }
+        .metrics-toggle {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: transform 0.2s;
         }
 
-        @media (max-width: 480px) {
-          .page-header {
-            padding: 12px 16px;
-          }
-
-          .welcome-screen {
-            padding: 16px;
-          }
-
-          .welcome-hero h1 {
-            font-size: 28px;
-          }
-
-          .welcome-hero p {
-            font-size: 16px;
-          }
+        .metrics-toggle:hover {
+          transform: translateY(-2px);
         }
+
+        .metrics-panel {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 1rem;
+          margin-bottom: 2rem;
+        }
+
+        .metric-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 12px;
+          padding: 1.5rem;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .metric-label {
+          display: block;
+          color: #4a5568;
+          font-size: 0.9rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+          display: block;
+          font-size: 2rem;
+          font-weight: 700;
+        }
+
+        .metric-value.green {
+          color: #38a169;
+        }
+
+        .metric-value.red {
+          color: #e53e3e;
+        }
+
+        .metric-value.blue {
+          color: #3182ce;
+        }
+
+        .diff-view {
+          background: #1a202c;
+          border-radius: 12px;
+          padding: 1.5rem;
+          font-family: 'Monaco', 'Menlo', monospace;
+          font-size: 0.9rem;
+          line-height: 1.6;
+          overflow-x: auto;
+        }
+
+        .diff-line {
+          display: flex;
+          align-items: flex-start;
+          margin-bottom: 0.25rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+        }
+
+        .diff-line.insert {
+          background: rgba(56, 161, 105, 0.2);
+          border-left: 3px solid #38a169;
+        }
+
+        .diff-line.delete {
+          background: rgba(229, 62, 62, 0.2);
+          border-left: 3px solid #e53e3e;
+        }
+
+        .diff-line.equal {
+          color: #e2e8f0;
+        }
+
+        .line-indicator {
+          width: 20px;
+          font-weight: bold;
+          margin-right: 0.5rem;
+          flex-shrink: 0;
+        }
+
+        .diff-line.insert .line-indicator {
+          color: #38a169;
+        }
+
+        .diff-line.delete .line-indicator {
+          color: #e53e3e;
+        }
+
+        .line-content {
+          color: #f7fafc;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .diff-line.insert .line-content {
+          color: #c6f6d5;
+        }
+
+                 .diff-line.delete .line-content {
+           color: #fed7d7;
+         }
+
+         .new-comparison-section {
+           display: flex;
+           justify-content: center;
+           margin-top: 3rem;
+           padding-top: 2rem;
+           border-top: 1px solid rgba(255, 255, 255, 0.2);
+         }
+
+         .upload-card {
+           backdrop-filter: blur(20px);
+           border: 1px solid rgba(255, 255, 255, 0.18);
+           box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+         }
+
+         .metric-card {
+           backdrop-filter: blur(16px);
+           border: 1px solid rgba(255, 255, 255, 0.18);
+           box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+         }
+
+         /* Animação de gradiente no fundo */
+         @keyframes gradientShift {
+           0% { background-position: 0% 50%; }
+           50% { background-position: 100% 50%; }
+           100% { background-position: 0% 50%; }
+         }
+
+         .compare-page {
+           background-size: 400% 400%;
+           animation: gradientShift 15s ease infinite;
+         }
+
+         /* Melhorar a responsividade */
+         @media (max-width: 768px) {
+           .page-header {
+             padding: 1rem;
+           }
+           
+           .page-main {
+             padding: 1rem;
+           }
+           
+           .upload-card {
+             max-width: 100%;
+           }
+           
+           .metrics-panel {
+             grid-template-columns: 1fr;
+           }
+           
+           .diff-header {
+             flex-direction: column;
+             gap: 1rem;
+             text-align: center;
+           }
+         }
       `}</style>
     </div>
   );
